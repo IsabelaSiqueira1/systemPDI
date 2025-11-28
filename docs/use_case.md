@@ -6,10 +6,14 @@ Objetivo: Retornar todos os serviços cadastrados.
 
 Pré-condição: Nenhuma.
 
-Fluxo Principal:
+Fluxo Principal:3
  1. O ator solicita a listagem dos serviços.
  2. O sistema recupera todos os serviços da memória.
  3. O sistema retorna a lista.
+
+exceções:
+ - Não ha serviços disponivel: retornar a mensagem que não ha serviço disponivel no momento
+ - falha na requisição: o sistema retorna erro.
 
 ------------------
 Criar Serviço
@@ -27,6 +31,7 @@ Fluxo Principal:
 
 exceções:
 - Nome não informado: O sistema rejeita a operação e retorna erro.
+- serviço existente: o sistema deve identificar caso haja um serviço duplicado e informar e retornar o problema
 
 --------------------
 Ativar Atendimento

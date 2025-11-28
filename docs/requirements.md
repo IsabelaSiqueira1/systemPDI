@@ -20,7 +20,7 @@ Criar o back-end de uma aplicação para gerenciamento de filas de atendimento (
  - controle de atendimentos inteiramente em memória volátil
 
 
-Funcionais(RF) -- o que o sistema faz
+Funcionais -- o que o sistema faz
  - O sistema deve disponibilizar endpoint para Listar serviços cadastrados.
  - O sistema deve disponibilizar endpoint para Criar um serviço.
  - O sistema deve permitir que o profissional inicie ou encerre seu atendimento em um serviço (status ativo/inativo)
@@ -33,7 +33,7 @@ Funcionais(RF) -- o que o sistema faz
 
 
 
-Não Funcionais(RNF) -- como o sistema deve ser
+Não Funcionais -- como o sistema deve ser
  - O sistema deve ser desenvolvido utilizando Go.
  - O sistema deve persistir dados na memoria volatil (não usar banco de dados).
  - O sistema deve utilizar estruturas adequadas de filas e listas em memória.
