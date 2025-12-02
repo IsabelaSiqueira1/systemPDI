@@ -14,6 +14,8 @@ Fluxo Principal:3
 exceções:
  - Não ha serviços disponivel: retornar a mensagem que não ha serviço disponivel no momento
  - falha na requisição: o sistema retorna erro.
+ - Falha interna ao recuperar serviços: o sistema retorna erro e loga.
+ - tempo de resposta alta: o sistema retorna timeout e loga.
 
 ------------------
 Criar Serviço
@@ -30,8 +32,10 @@ Fluxo Principal:
  4. O sistema retorna o serviço criado com seu ID.
 
 exceções:
-- Nome não informado: O sistema rejeita a operação e retorna erro.
-- serviço existente: o sistema deve identificar caso haja um serviço duplicado e informar e retornar o problema
+ - Nome não informado: O sistema rejeita a operação e retorna erro.
+ - Nome invalido(vazio, com espaços): o sistema retorna erro "nome invalido".
+ - serviço existente: o sistema deve identificar caso haja um serviço duplicado e informar e retornar o problema.
+ - Falha interna ao criar o serviço: o sistema retorna erro generico e registra o log.
 
 --------------------
 Ativar Atendimento
@@ -48,7 +52,10 @@ Fluxo Principal:
  4. O sistema confirma a ativação.
 
 exceções:
-- Serviço inexistente: O sistema retorna erro.
+ - Serviço inexistente: O sistema retorna erro.
+ - Profissional não vinculado ao serviço: o sistema bloqueia a operação.
+ - Profissional ja está ativo: O sistema retorna aviso.
+ - Erro interno ao alterar o estado: o sistema registra log e retorna erro. 
 
 --------------------
 Desativar Atendimento
@@ -64,7 +71,10 @@ Fluxo Principal:
  4. O sistema confirma a operação.
 
 exceções:
-- Profissional não ativo: O sistema retorna erro.
+ - Profissional não ativo: O sistema retorna erro.
+ - Profissional não vinculado ao serviço: o sistema bloqueia a operação.
+ - Profissional tentando desativar outro profissional(ID errado enviado): o sistema rejeita a operação. 
+ - Erro interno ao alterar o estado: o sistema registra log e retorna erro. 
 
 -------------------
 Emitir Ficha
@@ -87,8 +97,11 @@ Fluxo Principal:
 6. O sistema retorna a ficha emitida.
 
 exceções:
-- Categoria inválida: O sistema retorna erro.
-- Serviço inexistente: O sistema retorna erro.
+ - Nome do cliente não informado: o sistema retorna erro.
+ - Categoria inválida: O sistema retorna erro.
+ - Serviço inexistente: O sistema retorna erro.
+ - Serviço existe mas ainda nao tem nenhum profissional ativo: o sistema retorna que não ha profissionais disponiveis.
+ - Fila do serviço corrompida(erro na memoria):o sistema registra o erro e loga. 
 
 ------------------
 Chamar Próximo Cliente
@@ -110,9 +123,14 @@ Fluxo Principal:
  8. O sistema retorna o cliente chamado.
 
 exceções:
- - Sem profissionais ativos: O sistema retorna erro.
+ - nenhum profissionais ativos: O sistema retorna erro.
  - Fila vazia: O sistema retorna erro.
+ - Profissional não pertence ao serviço: o sistema retorna erro.
+ - Profissional tenta chamar a ficha  de outro serviço(ID incorreto): o sistema bloqueia a operação.
+ - Falha na geração do registro de atendimento: o sistema retorna erro e registra o log.
  - webhook falhou: O sistema registra a falha, mas prossegue com a chamada.
+ - payload do webhook invalido: O sistema registra erro interno.
+ - Dois profissionais chamam ao mesmo tempo: o sistema deve garantir controle.
 
 -----------------
 Enviar Webhook
@@ -128,3 +146,8 @@ Fluxo Principal:
 
 exceções:
  - Endpoint fora do ar: O sistema registra o erro no log.
+ - Endpoint recusou: o sistema registra erro.
+ - URL do webhook não configurada: o sistema registra erro e não envia nada.
+ - Payload invalido: o sistema registra erro.
+ - falha na rede: o sistema registra erro.
+ - a resposta do endpoint demorou demais: o sistema registra timeout e loga.
