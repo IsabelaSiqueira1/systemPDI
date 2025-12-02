@@ -1,5 +1,7 @@
 ## Diagrama de classe
 
+Draw.io: https://drive.google.com/file/d/1UR5ViAbHcCuxr4jYljAVzmnJzwghlo9q/view?usp=sharing
+
 Um diagrama de classe mostra as estruturas principais do sistema:
  - classes(entidades, objetos, modelos)
  - atributos
@@ -83,5 +85,3 @@ Professional → Attendance
 Multiplicidade:
  Professional 1 —— 0..* Attendance 
 
-
-Draw.io: https://app.diagrams.net/#G1UR5ViAbHcCuxr4jYljAVzmnJzwghlo9q#%7B%22pageId%22%3A%22SPg6ARsj7m4EUYAmXlnh%22%7D 
