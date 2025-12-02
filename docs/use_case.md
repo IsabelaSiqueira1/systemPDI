@@ -1,6 +1,6 @@
-Caso de uso
+## Caso de uso
 
-Listar Serviços 
+## Listar Serviços 
 Ator: Administrador/cliente
 Objetivo: Retornar todos os serviços cadastrados.
 
@@ -18,7 +18,7 @@ exceções:
  - tempo de resposta alta: o sistema retorna timeout e loga.
 
 ------------------
-Criar Serviço
+## Criar Serviço
 Ator: Administrador
 Objetivo: Cadastrar um novo serviço que poderá ser atendido pelos profissionais.    
 
@@ -38,7 +38,7 @@ exceções:
  - Falha interna ao criar o serviço: o sistema retorna erro generico e registra o log.
 
 --------------------
-Ativar Atendimento
+## Ativar Atendimento
 Ator: Profissional
 Objetivo: O profissional informa que está disponível para atender um serviço.
 
@@ -58,7 +58,7 @@ exceções:
  - Erro interno ao alterar o estado: o sistema registra log e retorna erro. 
 
 --------------------
-Desativar Atendimento
+## Desativar Atendimento
 Ator: Profissional
 Objetivo: Encerrar o período de atendimento do profissional.
 
@@ -77,7 +77,7 @@ exceções:
  - Erro interno ao alterar o estado: o sistema registra log e retorna erro. 
 
 -------------------
-Emitir Ficha
+## Emitir Ficha
 Ator: Cliente
 Objetivo: Gerar uma ficha de atendimento com prioridade.
 
@@ -104,7 +104,7 @@ exceções:
  - Fila do serviço corrompida(erro na memoria):o sistema registra o erro e loga. 
 
 ------------------
-Chamar Próximo Cliente
+## Chamar Próximo Cliente
 Ator: Profissional
 Objetivo: Chama o próximo cliente da fila, respeitando prioridade e ordem.
 
@@ -133,7 +133,7 @@ exceções:
  - Dois profissionais chamam ao mesmo tempo: o sistema deve garantir controle.
 
 -----------------
-Enviar Webhook
+## Enviar Webhook
 Ator: Sistema externo
 Objetivo: Enviar os dados da chamada para um endpoint configurado.
 
