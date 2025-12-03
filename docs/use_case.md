@@ -26,7 +26,7 @@ Objetivo: Cadastrar um novo serviço que poderá ser atendido pelos profissionai
 
 pré-condição:
 
- – O nome do serviço deve ser informado.
+ - O nome do serviço deve ser informado.
 
 Fluxo Principal:
  1. O usuário solicita a criação de um novo serviço.
@@ -47,7 +47,7 @@ Objetivo: O profissional informa que está disponível para atender um cliente.
 
 pré-condição:
 
- – O profissional deve estar vinculado a um serviço existente.
+ - O profissional deve estar vinculado a um serviço existente.
  - o profissional esta disponivel para iniciar um atendimento.
 
 Fluxo Principal:
@@ -68,7 +68,7 @@ Objetivo: Encerrar o período de atendimento do profissional.
 
 pré-condição: 
 
- – O profissional deve estar vinculado a um serviço existente.
+ - O profissional deve estar vinculado a um serviço existente.
 
 Fluxo Principal:
  1. O profissional solicita desativação do serviço.
@@ -89,9 +89,9 @@ Objetivo: Gerar uma ficha de atendimento com prioridade.
 
 Pré-condições:
 
- – O serviço deve existir.
- – A categoria deve ser válida (imediato, média, baixa).
- – O nome do cliente deve ser informado.
+ - O serviço deve existir.
+ - A categoria deve ser válida (imediato, média, baixa).
+ - O nome do cliente deve ser informado.
 
 Fluxo Principal:
  1. O cliente solicita a emissão da ficha informando:

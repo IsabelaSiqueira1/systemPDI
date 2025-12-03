@@ -9,14 +9,24 @@ Um diagrama de classe mostra as estruturas principais do sistema:
  - relacionamento entre classes
 
 ## 1. Service
+Representa cada serviço disponível no sistema (ex.: “Atendimento Geral”, “Financeiro”, etc.)
+
+Contém sua própria fila
+Contém os profissionais ativos naquele serviço
+
 Atributos
  - id: UUID
  - name: String
+ - fila: lista de fichas
+ - profissionais ativos: lista de profissionais
 
-Regras
- - 
+metodos
+ - adicionarFicha(f: Ficha)
+ - chamarProximo(): Ficha
+ - ativarProfissional(p: Profissional)
+ - desativarProfissional(p: Profissional)
 
-## 2. Ticket
+## 2. Ficha
 Representa a ficha retirada pelo cliente.
 
 Atributos
@@ -32,12 +42,17 @@ Regras
 
 
 ## 3. Professional
-Profissional que chama a próxima pessoa da fila.
+Profissional que atende um único serviço por vez.
 
 Atributos
  - id: UUID
  - name: String
+ - idService: UUID
  - status: ex: AVAILABLE, BUSY, OFFLINE
+
+Metodos
+ - iniciarAtendimento()
+ - encerrarAtendimento()
 
 Regras
  - Apenas chama tickets quando estiver AVAILABLE
@@ -45,12 +60,13 @@ Regras
 
 
 ## 4. Attendance
-Registro do atendimento de um ticket por um profissional.
+Representa uma chamada efetivada.
 
 Atributos
  - id: UUID
  - professionalId: UUID
- - ticketId: UUID
+ - fichaID: UUID
+ - serviceId: UUID
  - startedAt: DateTime
  - finishedAt: DateTime
 
@@ -59,25 +75,55 @@ Regras
  - Um profissional pode ter nenhum ou vários atendimentos ao longo do dia
 
 
+## WebhookConfig
+
+Atributos
+ - url: string
+
+metodos
+ - enviar(atendimento: Atendimento)
+
+
+
 ## Relacionamentos
 
-Service → Ticket
- 1 Service possui muitos Tickets
+Service 1 → N Fichas
+ 1 Service possui muitas Fichas
 
 Multiplicidade:
- Service 1 —— 0..* Ticket
+ Service 1 —— 0..* Ficha
 
----------------
-Ticket → Attendance
- 1 Ticket pode ter 0 ou 1 Attendance
+A fila é uma lista de fichas dentro do serviço.
 
-Multiplicidade:
- Ticket 1 —— 0..1 Attendance 
+----------
 
---------------
-Professional → Attendance
- 1 Professional pode ter 0..* Attendances
+Service 1 → N Profissionais
+ 1 Service possui muitos Profissionais
 
 Multiplicidade:
- Professional 1 —— 0..* Attendance 
+ Service 1 —— 0..* Profissional
 
+Mas apenas profissionais ativos podem chamar clientes.
+
+----------
+
+Profissional 1 → 1 Serviço
+
+multiplicidade:
+ Profissional 1 —— 1 Service
+
+Um profissional só atende um único serviço por vez.
+
+----------
+
+Atendimento 1 → 1 Ficha
+
+----------
+
+Atendimento 1 → 1 Profissional
+
+----------
+
+Atendimento 1 → 1 Serviço
+
+----------
