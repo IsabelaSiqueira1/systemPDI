@@ -8,7 +8,7 @@ Objetivo: Retornar todos os serviços cadastrados.
 
 Pré-condição: Nenhuma.
 
-Fluxo Principal:3
+Fluxo Principal:
  1. O ator solicita a listagem dos serviços.
  2. O sistema recupera todos os serviços da memória.
  3. O sistema retorna a lista.
@@ -25,7 +25,7 @@ Ator: Administrador
 Objetivo: Cadastrar um novo serviço que poderá ser atendido pelos profissionais.    
 
 pré-condição:
-– O nome do serviço deve ser informado.
+ – O nome do serviço deve ser informado.
 
 Fluxo Principal:
  1. O usuário solicita a criação de um novo serviço.
@@ -115,6 +115,7 @@ Objetivo: Chama o próximo cliente da fila, respeitando prioridade e ordem.
 Pré-condições:
  - Deve existir pelo menos 1 profissional ativo no serviço.
  - Deve existir cliente na fila.
+ - o profissional deve estar disponivel para chamar o proximo cliente da fila.
 
 Fluxo Principal:
  1. O profissional solicita chamar o próximo cliente.
