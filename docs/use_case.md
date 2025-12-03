@@ -46,6 +46,7 @@ Objetivo: O profissional informa que está disponível para atender um cliente.
 
 pré-condição:
  – O profissional deve estar vinculado a um serviço existente.
+ - o profissional esta disponivel para iniciar um atendimento.
 
 Fluxo Principal:
  1. O profissional solicita iniciação o atendimento.
@@ -63,7 +64,8 @@ exceções:
 Ator: Profissional
 Objetivo: Encerrar o período de atendimento do profissional.
 
-pré-condição: nenhuma
+pré-condição: 
+ – O profissional deve estar vinculado a um serviço existente.
 
 Fluxo Principal:
  1. O profissional solicita desativação do serviço.

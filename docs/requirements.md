@@ -41,6 +41,7 @@ Criar o back-end de uma aplicação para gerenciamento de filas de atendimento (
  - Todos os endpoints devem ser documentados utilizando Swagger/OpenAPI.
  - O sistema deve ser executável localmente com Docker/Docker Compose.
  - O endpoint externo para o webhook deve ser configurável.
+ - O sistema deve ter um tempo limite de resposta da requisição.
 
 
 ## Regra de negócios
