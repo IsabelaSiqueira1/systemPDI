@@ -40,27 +40,26 @@ exceções:
  - Falha interna ao criar o serviço: o sistema retorna erro generico e registra o log.
 
 --------------------
-## Ativar Atendimento
+## Iniciar Atendimento
 Ator: Profissional
-Objetivo: O profissional informa que está disponível para atender um serviço.
+Objetivo: O profissional informa que está disponível para atender um cliente.
 
 pré-condição:
-– O profissional deve estar vinculado a um serviço existente.
+ – O profissional deve estar vinculado a um serviço existente.
 
 Fluxo Principal:
- 1. O profissional solicita ativação no serviço escolhido.
- 2. O sistema valida se o serviço existe.
- 3. O sistema marca o profissional como ativo naquele serviço.
- 4. O sistema confirma a ativação.
+ 1. O profissional solicita iniciação o atendimento.
+ 2. O sistema valida existe um cliente para ser atendido.
+ 3. O sistema marca o profissional como ocupado naquele atendimento.
 
 exceções:
  - Serviço inexistente: O sistema retorna erro.
  - Profissional não vinculado ao serviço: o sistema bloqueia a operação.
- - Profissional ja está ativo: O sistema retorna aviso.
+ - Profissional ja está ocupado: O sistema retorna aviso.
  - Erro interno ao alterar o estado: o sistema registra log e retorna erro. 
 
 --------------------
-## Desativar Atendimento
+## Encerrar Atendimento
 Ator: Profissional
 Objetivo: Encerrar o período de atendimento do profissional.
 
@@ -84,8 +83,9 @@ Ator: Cliente
 Objetivo: Gerar uma ficha de atendimento com prioridade.
 
 Pré-condições:
-– O serviço deve existir.
-– A categoria deve ser válida (imediato, média, baixa).
+ – O serviço deve existir.
+ – A categoria deve ser válida (imediato, média, baixa).
+ – O nome do cliente deve ser informado.
 
 Fluxo Principal:
  1. O cliente solicita a emissão da ficha informando:

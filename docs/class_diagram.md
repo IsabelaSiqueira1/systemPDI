@@ -12,13 +12,9 @@ Um diagrama de classe mostra as estruturas principais do sistema:
 Atributos
  - id: UUID
  - name: String
- - queue: Queue FIFO
- - webhookUrl: String
 
 Regras
- - Gera tickets
- - Mantém ordem FIFO
- - Notifica via webhook quando necessário
+ - 
 
 ## 2. Ticket
 Representa a ficha retirada pelo cliente.
