@@ -25,6 +25,7 @@ Ator: Administrador
 Objetivo: Cadastrar um novo serviço que poderá ser atendido pelos profissionais.    
 
 pré-condição:
+
  – O nome do serviço deve ser informado.
 
 Fluxo Principal:
@@ -45,6 +46,7 @@ Ator: Profissional
 Objetivo: O profissional informa que está disponível para atender um cliente.
 
 pré-condição:
+
  – O profissional deve estar vinculado a um serviço existente.
  - o profissional esta disponivel para iniciar um atendimento.
 
@@ -65,6 +67,7 @@ Ator: Profissional
 Objetivo: Encerrar o período de atendimento do profissional.
 
 pré-condição: 
+
  – O profissional deve estar vinculado a um serviço existente.
 
 Fluxo Principal:
@@ -85,6 +88,7 @@ Ator: Cliente
 Objetivo: Gerar uma ficha de atendimento com prioridade.
 
 Pré-condições:
+
  – O serviço deve existir.
  – A categoria deve ser válida (imediato, média, baixa).
  – O nome do cliente deve ser informado.
@@ -94,11 +98,11 @@ Fluxo Principal:
     – nome do cliente
     – serviço
     – categoria
-2. O sistema valida os dados.
-3. O sistema gera uma nova ficha com ID único por serviço.
-4. O sistema registra o momento de emissão.
-5. O sistema adiciona a ficha na fila correta do serviço.
-6. O sistema retorna a ficha emitida.
+ 2. O sistema valida os dados.
+ 3. O sistema gera uma nova ficha com ID único por serviço.
+ 4. O sistema registra o momento de emissão.
+ 5. O sistema adiciona a ficha na fila correta do serviço.
+ 6. O sistema retorna a ficha emitida.
 
 exceções:
  - Nome do cliente não informado: o sistema retorna erro.
@@ -113,6 +117,7 @@ Ator: Profissional
 Objetivo: Chama o próximo cliente da fila, respeitando prioridade e ordem.
 
 Pré-condições:
+
  - Deve existir pelo menos 1 profissional ativo no serviço.
  - Deve existir cliente na fila.
  - o profissional deve estar disponivel para chamar o proximo cliente da fila.
