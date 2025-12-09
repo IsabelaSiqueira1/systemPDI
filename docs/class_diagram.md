@@ -1,78 +1,88 @@
 ## Diagrama de classe
 
-Draw.io: https://drive.google.com/file/d/1UR5ViAbHcCuxr4jYljAVzmnJzwghlo9q/view?usp=sharing
+5 classes principais foram identificadas para o sistema de gerenciamento de filas de atendimento:
+ - Serviço
+ - Ficha
+ - Profissional
+ - Atendimento
+ - ConfiguraçãoWebhook
 
-Um diagrama de classe mostra as estruturas principais do sistema:
- - classes(entidades, objetos, modelos)
- - atributos
- - metodos relevantes
- - relacionamento entre classes
+
 
 ## 1. Service
-Representa cada serviço disponível no sistema (ex.: “Atendimento Geral”, “Financeiro”, etc.)
-
-Contém sua própria fila
-Contém os profissionais ativos naquele serviço
+Representa um guichê/serviço de atendimento.
+Gerencia sua fila de fichas, profissionais ativos e a operação de chamar próximo cliente.
 
 Atributos
  - id: UUID
  - name: String
- - fila: lista de fichas
- - profissionais ativos: lista de profissionais
+ - fila: lista de fichas (Armazena fichas em ordem de prioridade)
+ - profissionais ativos: lista de profissionais (Profissionais disponíveis para chamar fichas)
 
 metodos
- - adicionarFicha(f: Ficha)
- - chamarProximo(): Ficha
- - ativarProfissional(p: Profissional)
- - desativarProfissional(p: Profissional)
+ - adicionarFicha(f: Ficha)  - Adiciona ficha na fila, respeitando prioridade
+ - chamarProximo(): Ficha  - Seleciona a próxima ficha conforme regras de prioridade
+ - ativarProfissional(p: Profissional) - Define profissional como ativo
+ - desativarProfissional(p: Profissional) - Remove profissional da lista de ativos / marca como inativo
+
+Regras de Negócio associadas
+ - Um serviço possui sua própria fila.
+ - Só é permitido chamar próximo cliente se houver profissional ativo.
+ - A fila deve respeitar ordem: Imediato > Média > Baixa.
+ - Ao chamar um cliente, o serviço registra o início de um atendimento.
+
 
 ## 2. Ficha
-Representa a ficha retirada pelo cliente.
+Representa a solicitação de atendimento feita por um cliente.
 
 Atributos
  - id: UUID
  - clientName: String
- - category: Category
- - issuedAt: DateTime
+ - category: CategoriaAtendimento (Prioridade Imediato, Média, Baixa)
+ - emitidaEm: DateTime (Momento de emissão)
+ - idService: UUID (Serviço ao qual a ficha pertence)
 
 Regras
- - Sempre pertence a um único Service
- - Só pode estar em uma fila por vez
- - É consumido no atendimento
+ - Cada ficha sempre pertence a um único serviço.
+ - Uma ficha pode gerar no máximo um atendimento.
+ - Fichas são consumidas ao serem chamadas.
 
 
-## 3. Professional
-Profissional que atende um único serviço por vez.
+## 3. Profissional
+Representa o atendente que chama fichas e realiza os atendimentos.
 
 Atributos
  - id: UUID
  - name: String
- - idService: UUID
- - status: ex: AVAILABLE, BUSY, OFFLINE
+ - idService: UUID (Serviço ao qual está vinculado)
+ - status: StatusProfissional (ex: AVAILABLE, BUSY, OFFLINE)
 
 Metodos
- - iniciarAtendimento()
- - encerrarAtendimento()
+ - iniciarAtendimento() - Marca profissional como BUSY
+ - encerrarAtendimento() - Marca profissional como AVAILABLE
+ - ativar() - Fica ativo no serviço
+ - desativar() - Fica inativo no serviço
 
 Regras
- - Apenas chama tickets quando estiver AVAILABLE
- - Após chamar, vira BUSY até concluir o atendimento
+ - Só pode chamar ficha se estiver AVAILABLE.
+ - Só pode chamar ficha do serviço ao qual está vinculado.
+ - Pode ter vários atendimentos ao longo do dia.
 
 
-## 4. Attendance
-Representa uma chamada efetivada.
+## 4. Atendimento
+Representa o registro oficial de um atendimento realizado.
 
 Atributos
- - id: UUID
- - professionalId: UUID
- - fichaID: UUID
- - serviceId: UUID
- - startedAt: DateTime
- - finishedAt: DateTime
+ - id: UUID (Identificador do atendimento)
+ - idProfissional: UUID (Profissional que realizou a chamada)
+ - idFicha: UUID (Ficha atendida)
+ - idServico: UUID (Serviço onde ocorreu)
+ - inicioEm: DateTime (Início da chamada)
+ - fimEm: DateTime (Fim da chamada)
 
 Regras
- - Um ticket gera no máximo 1 atendimento
- - Um profissional pode ter nenhum ou vários atendimentos ao longo do dia
+ - Um atendimento está sempre relacionado a exatamente 1 ficha, 1 profissional e 1 serviço.
+ - Uma ficha deve gerar, no máximo, 1 atendimento.
 
 
 ## WebhookConfig
@@ -81,49 +91,53 @@ Atributos
  - url: string
 
 metodos
- - enviar(atendimento: Atendimento)
+ - enviar(atendimento: Atendimento) - Envia notificação do atendimento via POST
 
 
 
 ## Relacionamentos
 
-Service 1 → N Fichas
+Service —— Fichas
  1 Service possui muitas Fichas
-
-Multiplicidade:
- Service 1 —— 0..* Ficha
-
-A fila é uma lista de fichas dentro do serviço.
-
-----------
-
-Service 1 → N Profissionais
- 1 Service possui muitos Profissionais
-
-Multiplicidade:
- Service 1 —— 0..* Profissional
-
-Mas apenas profissionais ativos podem chamar clientes.
-
-----------
-
-Profissional 1 → 1 Serviço
+ cada ficha pertence a exatamente um unico Service
 
 multiplicidade:
- Profissional 1 —— 1 Service
-
-Um profissional só atende um único serviço por vez.
+ Service 1 —— 0..* Ficha
 
 ----------
 
-Atendimento 1 → 1 Ficha
+Service ——   Profissionais
+ 1 Service possui muitos Profissionais
+ 1 Profissional pertence a exatamente 1 Serviço
+
+multiplicidade:
+ Service 1 —— 0..* Profissional
 
 ----------
 
-Atendimento 1 → 1 Profissional
+Profissional —— Atendimento
+ 1 Profissional pode ter zero, um ou muitos Atendimentos
+ Cada Atendimento está ligado a 1 Profissional
+
+multiplicidade:
+ Profissional 1 —— 0..* Atendimento
 
 ----------
 
-Atendimento 1 → 1 Serviço
+Ficha —— Atendimento
+ 1 Ficha pode gerar zero ou um Atendimento
+ Cada Atendimento está ligado a 1 Ficha
+
+multiplicidade:
+ Ficha 1 —— 0..1 Atendimento
+
+----------
+
+serviço —— Atendimento
+ 1 Serviço pode ter zero, um ou muitos Atendimentos
+ 1 Atendimento ocorre em exatamente 1 Serviço
+
+multiplicidade:
+ Service 1 —— 0..* Atendimento
 
 ----------
