@@ -1,5 +1,7 @@
 ## Diagrama de classe
 
+https://app.diagrams.net/#G1UR5ViAbHcCuxr4jYljAVzmnJzwghlo9q#%7B%22pageId%22%3A%22SPg6ARsj7m4EUYAmXlnh%22%7D
+
 5 classes principais foram identificadas para o sistema de gerenciamento de filas de atendimento:
  - Serviço
  - Ficha

@@ -8,9 +8,9 @@ A linguagem não é um método ou uma linguagem de desenvolvimento, ou seja, voc
 
 O elemento central da UML é o diagrama, que é uma representação gráfica do modelo de um sistema. Os diagramas permitem representar o sistema de duas maneiras distintas: estática (estrutural) ou dinâmica (comportamental).
 
-## 1. Diagramas Estruturais: Diagramas que mostram a estrutura estática do sistema, incluindo objetos, operações, atributos e métodos. Exemplos incluem o diagrama de classes, objeto, componente e pacote.
+# 1. Diagramas Estruturais: Diagramas que mostram a estrutura estática do sistema, incluindo objetos, operações, atributos e métodos. Exemplos incluem o diagrama de classes, objeto, componente e pacote.
 
-## 2. Diagramas Comportamentais: Mostram o comportamento dinâmico e o funcionamento do sistema, por meio da colaboração dos objetos e da mudança de estados internos. Exemplos incluem o diagrama de casos de uso, sequência, comunicação e atividade.
+# 2. Diagramas Comportamentais: Mostram o comportamento dinâmico e o funcionamento do sistema, por meio da colaboração dos objetos e da mudança de estados internos. Exemplos incluem o diagrama de casos de uso, sequência, comunicação e atividade.
 
 
 ## Caso de uso (Estrutura comportamental)
@@ -71,7 +71,7 @@ Representamos uma classe usando o diagrama dividido em tres partes:
 Representamos a visibilidade dos membros (atributos e metodos) usando os seguintes simbolos:
  - + : Publico (acessivel por qualquer classe)
  - - : Privado (acessivel apenas pela propria classe)
- - # : Protegido (acessivel pela propria classe e suas subclasses)
+ - (#): Protegido (acessivel pela propria classe e suas subclasses)
  - ~ : Pacote (acessivel apenas por classes do mesmo pacote) 
 
 
@@ -101,7 +101,7 @@ Exemplos comuns de multiplicidade:
   - 1..1 (Um e somente um. Um objeto de classe se relaciona com um objeto da outra classe)
   - 0..* (Minimo nenhuma e no maximo muitos. Indica que um objeto pode se relacionar com varios objetos da outra classe)
   - 1..* (Minimo um e no maximo muitos. Indica que um objeto deve se relacionar com varios objetos da outra classe)
-  - * (Muitos)
+  - (*) (Muitos)
 
 
 ## Relacionamento de Associação:
