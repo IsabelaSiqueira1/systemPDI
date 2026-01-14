@@ -1,6 +1,6 @@
 ## Caso de uso
 
-draw.io: https://drive.google.com/file/d/1UR5ViAbHcCuxr4jYljAVzmnJzwghlo9q/view?usp=sharing
+draw.io: https://app.diagrams.net/#G1UR5ViAbHcCuxr4jYljAVzmnJzwghlo9q#%7B%22pageId%22%3A%227V9Oo_qkh-ZA_1hTpyhE%22%7D
 
 ## Listar Serviços
 
@@ -127,7 +127,7 @@ exceções:
 - Nome do cliente não informado: o sistema retorna erro.
 - Categoria inválida: O sistema retorna erro.
 - Serviço inexistente: O sistema retorna erro.
-- Serviço existe mas ainda nao tem nenhum profissional ativo: o sistema retorna que não ha profissionais disponiveis.
+- Serviço existe mas ainda nao tem nenhum profissional ativo: o sistema retorna que não ha profissionais disponiveis.(verificar com natan)
 - Fila do serviço corrompida(erro na memoria):o sistema registra o erro e loga.
 
 ---
@@ -150,9 +150,8 @@ Fluxo Principal:
 3.  O sistema verifica se existe cliente na fila.
 4.  O sistema seleciona a ficha com maior prioridade.
 5.  O sistema registra o início do novo atendimento.
-6.  O sistema registra o fim do atendimento anterior (se houver).
-7.  O sistema envia um webhook com os dados da chamada.
-8.  O sistema retorna o cliente chamado.
+6.  O sistema envia um webhook com os dados da chamada.
+7.  O sistema retorna o cliente chamado.
 
 exceções:
 
