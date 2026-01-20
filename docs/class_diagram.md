@@ -2,36 +2,32 @@
 
 draw.io: https://app.diagrams.net/#G1UR5ViAbHcCuxr4jYljAVzmnJzwghlo9q#%7B%22pageId%22%3A%22SPg6ARsj7m4EUYAmXlnh%22%7D
 
-5 classes principais foram identificadas para o sistema de gerenciamento de filas de atendimento:
+## Classes
 
 - Serviço
+- Fila
 - Ficha
 - Profissional
 - Atendimento
-- ConfiguraçãoWebhook
+- Webhook
+- WebhookConfig
 
-## 1. Service
+## 1. Serviço
 
-Representa um guichê/serviço de atendimento.
-Gerencia sua fila de fichas, profissionais ativos e a operação de chamar próximo cliente.
+Gerencia sua fila de fichas, profissionais vinculados e a operação de chamar o próximo cliente.
 
 Atributos
 
 - id: UUID
 - name: String
-- profissionais ativos: lista de profissionais (Profissionais disponíveis para chamar fichas)
-
-metodos
-
-- ativarProfissional() - Define profissional como ativo
-- desativarProfissional() - Remove profissional da lista de ativos / marca como inativo
+- profissionais: List<Profissional>
 
 Regras de Negócio associadas
 
-- Um serviço possui sua própria fila.
-- Só é permitido chamar próximo cliente se houver profissional ativo.
-- A fila deve respeitar ordem: Imediato > Média > Baixa.
-- Ao chamar um cliente, o serviço registra o início de um atendimento.
+- Um serviço possui exatamente 1 fila prioritária.
+- As fichas emitidas para um serviço entram apenas na fila daquele serviço.
+- O atendimento respeita prioridade: IMEDIATO > MÉDIA > BAIXA (sem furar), e FIFO dentro da mesma categoria.
+- O profissional só pode chamar próximo cliente do serviço ao qual está vinculado.
 
 ## 2. Fila
 
@@ -39,14 +35,18 @@ Representa a estrutura que mantém as fichas em ordem de prioridade.
 
 Atributos
 
-- Medium: Queue<Ficha>
 - Priority: Queue<Ficha>
+- Medium: Queue<Ficha>
 - Low: Queue<Ficha>
 
 Metodos
 
-- adicionaFicha(f: Ficha) - Adiciona ficha na fila correta conforme prioridade
-- chamarProximo(): Ficha - Retorna a próxima ficha conforme regras de prioridade
+- adicionaFicha(f: Ficha) - Adiciona a ficha na fila correspondente à categoria.
+- chamarProximo(): Ficha - Retorna e remove a próxima ficha respeitando:
+  - imediata se não estiver vazia
+  - senão media se não estiver vazia
+  - senão baixa se não estiver vazia
+  - se todas vazias, retorna erro/sem ficha
 
 ## 2. Ficha
 
@@ -56,7 +56,7 @@ Atributos
 
 - id: UUID
 - clientName: String
-- category: CategoriaAtendimento (Prioridade Imediato, Média, Baixa)
+- category: CategoriaAtendimento (Priority, Medium, Low)
 - emitidaEm: DateTime (Momento de emissão)
 - idService: UUID (Serviço ao qual a ficha pertence)
 
@@ -64,7 +64,7 @@ Regras
 
 - Cada ficha sempre pertence a um único serviço.
 - Uma ficha pode gerar no máximo um atendimento.
-- Fichas são consumidas ao serem chamadas.
+- Ao ser chamada, a ficha é removida da fila.
 
 ## 3. Profissional
 
@@ -75,20 +75,20 @@ Atributos
 - id: UUID
 - name: String
 - idService: UUID (Serviço ao qual está vinculado)
-- status: StatusProfissional (ex: AVAILABLE, BUSY, OFFLINE)
+- status: StatusProfissional (DISPONIVEL | OCUPADO | INDISPONIVEL)
 
 Metodos
 
-- iniciarAtendimento() - Marca profissional como BUSY
-- encerrarAtendimento() - Marca profissional como AVAILABLE
-- ativar() - Fica ativo no serviço
-- desativar() - Fica inativo no serviço
+- MarcarOcupado() - Marca profissional como OCUPADO
+- MarcarDisponivel() - marcar profissional como DISPONIVEL
+- MarcarIndisponivel() - Marca profissional como INDISPONIVEL
 
 Regras
 
-- Só pode chamar ficha se estiver AVAILABLE.
-- Só pode chamar ficha do serviço ao qual está vinculado.
-- Pode ter vários atendimentos ao longo do dia.
+- Só pode chamar próximo cliente se estiver DISPONIVEL.
+- Se estiver OCUPADO, deve encerrar o atendimento antes de chamar outro.
+- Se estiver INDISPONIVEL, não pode chamar próximo nem encerrar atendimento.
+- Só atua no serviço ao qual está vinculado.
 
 ## 4. Atendimento
 
@@ -112,12 +112,11 @@ Regras
 
 atributos
 
-- url:string
-- status: statusWebHook
+- status: StatusWebhook (SUCESSO | ERRO | NAO_CONFIGURADO)
 
 metodos
 
-- EnviarWebhook()
+- enviar(payload): ResultadoWebhook
 
 ## WebhookConfig
 
@@ -127,47 +126,48 @@ Atributos
 
 ## Relacionamentos
 
-Service —— Fichas
-1 Service possui muitas Fichas
-cada ficha pertence a exatamente um unico Service
+Serviço —— Fila
 
-multiplicidade:
+Cada serviço possui exatamente 1 fila prioritária
+Service 1 —— 1 Fila
+
+---
+
+Serviço —— Ficha
+
+Um serviço possui muitas fichas
 Service 1 —— 0..\* Ficha
 
 ---
 
-Service —— Profissionais
-1 Service possui muitos Profissionais
-1 Profissional pertence a exatamente 1 Serviço
+Serviço —— Profissional
 
-multiplicidade:
+Um serviço possui muitos profissionais
 Service 1 —— 0..\* Profissional
 
 ---
 
 Profissional —— Atendimento
-1 Profissional pode ter zero, um ou muitos Atendimentos
-Cada Atendimento está ligado a 1 Profissional
+Um profissional pode realizar muitos atendimentos
 
-multiplicidade:
+---
+
 Profissional 1 —— 0..\* Atendimento
 
 ---
 
 Ficha —— Atendimento
-1 Ficha pode gerar zero ou um Atendimento
-Cada Atendimento está ligado a 1 Ficha
 
-multiplicidade:
+---
+
 Ficha 1 —— 0..1 Atendimento
 
 ---
 
-serviço —— Atendimento
-1 Serviço pode ter zero, um ou muitos Atendimentos
-1 Atendimento ocorre em exatamente 1 Serviço
+Serviço —— Atendimento
 
-multiplicidade:
+---
+
 Service 1 —— 0..\* Atendimento
 
 ---
