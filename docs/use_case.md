@@ -2,6 +2,57 @@
 
 draw.io: https://app.diagrams.net/#G1UR5ViAbHcCuxr4jYljAVzmnJzwghlo9q#%7B%22pageId%22%3A%227V9Oo_qkh-ZA_1hTpyhE%22%7D
 
+```mermaid
+
+flowchart LR
+
+subgraph LEFT[" "]
+direction TB
+A1([Administrador])
+A2([Cliente])
+A3([Profissional])
+end
+
+subgraph SYS["Sistema de gerenciamento de fila"]
+direction LR
+
+  subgraph UC_LEFT[" "]
+  direction TB
+  U1([Configurar URL<br/>webhook])
+  U2([Listar serviços])
+  U3([Criar serviços])
+  U4([Emitir ficha])
+  U5([Chamar o próximo<br/>cliente])
+  U7([Desativar<br/>atendimento])
+  end
+
+  subgraph UC_RIGHT[" "]
+  direction TB
+  U6([Enviar webhook])
+  end
+
+end
+
+subgraph RIGHT[" "]
+direction TB
+E([Sistema externo])
+end
+
+A1 --- U1
+A1 --- U2
+A1 --- U3
+
+A2 --- U2
+A2 --- U4
+
+A3 --- U5
+A3 --- U7
+
+U5 -. "<<include>>" .-> U6
+U6 ---|receber webhook| E
+
+```
+
 ## Listar Serviços
 
 Ator: Administrador/cliente
@@ -185,3 +236,7 @@ Fluxo principal:
 2.  O administrador informa a URL do webhook.
 3.  O sistema valida o formato da URL.
 4.  O sistema salva a configuração.
+
+```
+
+```
