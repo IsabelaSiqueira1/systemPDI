@@ -95,7 +95,7 @@ Ficha "1" o-- "0..1" Atendimento : gera
 
 Webhook ..> WebhookConfig : usa
 
-´´´
+```
 
 ## Classes
 
@@ -266,4 +266,7 @@ Serviço —— Atendimento
 Service 1 —— 0..\* Atendimento
 
 ---
+
+```
+
 ```
