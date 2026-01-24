@@ -2,7 +2,7 @@
 
 draw.io: https://app.diagrams.net/#G1UR5ViAbHcCuxr4jYljAVzmnJzwghlo9q#%7B%22pageId%22%3A%22SPg6ARsj7m4EUYAmXlnh%22%7D
 
-´´´mermaid
+```mermaid
 
 classDiagram
 
@@ -263,3 +263,4 @@ Serviço —— Atendimento
 Service 1 —— 0..\* Atendimento
 
 ---
+```
