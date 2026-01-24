@@ -7,91 +7,94 @@ draw.io: https://app.diagrams.net/#G1UR5ViAbHcCuxr4jYljAVzmnJzwghlo9q#%7B%22page
 classDiagram
 
 class Servico {
-+UUID id
-+String name
-+List~Profissional~ profissionais
+  +UUID id
+  +String name
+  +List~Profissional~ profissionais
 }
 
 class Fila {
-+Queue~Ficha~ Priority
-+Queue~Ficha~ Medium
-+Queue~Ficha~ Low
-+adicionaFicha(f: Ficha) void
-+chamarProximo() Ficha
+  +Queue~Ficha~ Priority
+  +Queue~Ficha~ Medium
+  +Queue~Ficha~ Low
+  +adicionaFicha(f: Ficha) void
+  +chamarProximo() Ficha
 }
 
 class Ficha {
-+UUID id
-+String clientName
-+CategoriaAtendimento category
-+DateTime emitidaEm
-+UUID idService
+  +UUID id
+  +String clientName
+  +CategoriaAtendimento category
+  +DateTime emitidaEm
+  +UUID idService
 }
 
 class Profissional {
-+UUID id
-+String name
-+UUID idService
-+StatusProfissional status
-+MarcarOcupado() void
-+MarcarDisponivel() void
-+MarcarIndisponivel() void
+  +UUID id
+  +String name
+  +UUID idService
+  +StatusProfissional status
+  +MarcarOcupado() void
+  +MarcarDisponivel() void
+  +MarcarIndisponivel() void
 }
 
 class Atendimento {
-+UUID id
-+UUID idProfissional
-+UUID idFicha
-+UUID idServico
-+DateTime inicioEm
-+DateTime fimEm
+  +UUID id
+  +UUID idProfissional
+  +UUID idFicha
+  +UUID idServico
+  +DateTime inicioEm
+  +DateTime fimEm
 }
 
 class Webhook {
-+StatusWebhook status
-+enviar(payload) ResultadoWebhook
+  +StatusWebhook status
+  +enviar(payload) ResultadoWebhook
 }
 
 class WebhookConfig {
-+String url
+  +String url
 }
 
+%% Enums (como classes simples para evitar erro no draw.io)
 class CategoriaAtendimento {
-<<enumeration>>
-Priority
-Medium
-Low
+  <<enum>>
+  Priority
+  Medium
+  Low
 }
 
 class StatusProfissional {
-<<enumeration>>
-DISPONIVEL
-OCUPADO
-INDISPONIVEL
+  <<enum>>
+  DISPONIVEL
+  OCUPADO
+  INDISPONIVEL
 }
 
 class StatusWebhook {
-<<enumeration>>
-SUCESSO
-ERRO
-NAO_CONFIGURADO
+  <<enum>>
+  SUCESSO
+  ERRO
+  NAO_CONFIGURADO
 }
 
 class ResultadoWebhook {
-<<enumeration>>
-SUCESSO
-FALHA
+  <<enum>>
+  SUCESSO
+  FALHA
 }
 
-Servico "1" _-- "1" Fila : possui
-Servico "1" o-- "0.._" Ficha : emite
-Servico "1" o-- "0.._" Profissional : possui
-Servico "1" o-- "0.._" Atendimento : registra
+%% Relacionamentos
+Servico "1" *-- "1" Fila : possui
+Servico "1" o-- "0..*" Ficha : emite
+Servico "1" o-- "0..*" Profissional : possui
+Servico "1" o-- "0..*" Atendimento : registra
 
-Profissional "1" o-- "0..\*" Atendimento : realiza
+Profissional "1" o-- "0..*" Atendimento : realiza
 Ficha "1" o-- "0..1" Atendimento : gera
 
 Webhook ..> WebhookConfig : usa
+
 ´´´
 
 ## Classes
