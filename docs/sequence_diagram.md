@@ -2,8 +2,9 @@
 
 draw.io: https://app.diagrams.net/#G1UR5ViAbHcCuxr4jYljAVzmnJzwghlo9q#%7B%22pageId%22%3A%22ZbWJfetMCKG_KI7-XJCB%22%7D
 
-```mermaid
 ## Diagrama de sequencia - Chamar proximo Cliente()
+
+```mermaid
 
 sequenceDiagram
     actor Prof as Profissional
@@ -81,18 +82,19 @@ sequenceDiagram
             end
         end
     end
-
-
+```
 
 ## Diagrama de sequencia - Encerrar Atendimento()
 
+```mermaid
+
 sequenceDiagram
-    actor Prof as Profissional
-    participant API as API (AtendimentosController)
-    participant SVC as AtendimentoService
-    participant Repo as ServicoRepo (memoria)
-    participant Serv as Servico
-    participant ARepo as AtendimentoRepo (memoria)
+actor Prof as Profissional
+participant API as API (AtendimentosController)
+participant SVC as AtendimentoService
+participant Repo as ServicoRepo (memoria)
+participant Serv as Servico
+participant ARepo as AtendimentoRepo (memoria)
 
     Prof->>API: PUT /v1/servicos/{id}/encerrar-atendimento {idProfissional}
     API->>SVC: encerrarAtendimento(idServico, idProfissional)
@@ -140,20 +142,19 @@ sequenceDiagram
             end
         end
     end
-
-
-
+```
 
 ## Diagrama de sequencia - Emitir Ficha()
 
+```mermaid
 
 sequenceDiagram
-    actor Cli as Cliente
-    participant API as API (FichasController)
-    participant SVC as FichaService
-    participant Repo as ServicoRepo (memoria)
-    participant Serv as Servico
-    participant Fila as Fila (do servico)
+actor Cli as Cliente
+participant API as API (FichasController)
+participant SVC as FichaService
+participant Repo as ServicoRepo (memoria)
+participant Serv as Servico
+participant Fila as Fila (do servico)
 
     Cli->>API: POST /v1/servicos/{id}/fichas {nomeCliente, categoria}
     API->>SVC: emitirFicha(idServico, nomeCliente, categoria)
@@ -185,4 +186,5 @@ sequenceDiagram
             end
         end
     end
+
 ```
