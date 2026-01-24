@@ -2,7 +2,7 @@
 
 draw.io: https://app.diagrams.net/#G1UR5ViAbHcCuxr4jYljAVzmnJzwghlo9q#%7B%22pageId%22%3A%22ZbWJfetMCKG_KI7-XJCB%22%7D
 
-## Diagrama de sequencia - Chamar proximo Cliente()
+### Diagrama de sequencia - Chamar proximo Cliente()
 
 ```mermaid
 
@@ -84,7 +84,7 @@ sequenceDiagram
     end
 ```
 
-## Diagrama de sequencia - Encerrar Atendimento()
+### Diagrama de sequencia - Encerrar Atendimento()
 
 ```mermaid
 
@@ -144,7 +144,7 @@ participant ARepo as AtendimentoRepo (memoria)
     end
 ```
 
-## Diagrama de sequencia - Emitir Ficha()
+### Diagrama de sequencia - Emitir Ficha()
 
 ```mermaid
 
@@ -187,4 +187,107 @@ participant Fila as Fila (do servico)
         end
     end
 
+```
+
+### Diagrama de sequencia - Listar Servicos()
+
+```mermaid
+
+sequenceDiagram
+    actor User as Administrador/Cliente
+    participant API as API (ServicosController)
+    participant SVC as ServicoService
+    participant Repo as ServicoRepo (memoria)
+
+    User->>API: GET /v1/servicos
+    API->>SVC: listarServicos()
+    SVC->>Repo: buscarTodos()
+    Repo-->>SVC: listaServicos
+    SVC-->>API: listaServicosDTO
+    API-->>User: 200 OK + JSON (pode ser lista vazia)
+```
+
+### Diagrama de sequencia - Criar Servico()
+
+```mermaid
+
+sequenceDiagram
+    actor Admin as Administrador
+    participant API as API (ServicosController)
+    participant SVC as ServicoService
+    participant Repo as ServicoRepo (memoria)
+
+    Admin->>API: POST /v1/servicos {nome}
+    API->>SVC: criarServico(nome)
+
+    alt nome vazio ou so espacos
+        SVC-->>API: erro 400 (nome invalido)
+        API-->>Admin: 400
+    else nome ok
+        SVC->>Repo: existePorNome(nome)?
+        alt ja existe
+            Repo-->>SVC: true
+            SVC-->>API: erro 409 (servico ja existe)
+            API-->>Admin: 409
+        else nao existe
+            Repo-->>SVC: false
+            SVC->>Repo: salvar(servicoNovo + fila)
+            Repo-->>SVC: servicoCriado
+            SVC-->>API: servicoDTO
+            API-->>Admin: 201 Created + JSON
+        end
+    end
+```
+
+### Diagrama de sequencia - Configurar Webhook()
+
+```mermaid
+
+sequenceDiagram
+    actor Admin as Administrador
+    participant API as API (WebhookController)
+    participant SVC as WebhookConfigService
+    participant Repo as WebhookConfigRepo (memoria)
+
+    Admin->>API: PUT /v1/webhook/config {url}
+    API->>SVC: configurarURL(url)
+
+    alt url vazia ou formato invalido
+        SVC-->>API: erro 400 (url invalida)
+        API-->>Admin: 400
+    else url ok
+        SVC->>Repo: salvarOuAtualizar(url)
+        Repo-->>SVC: ok
+        SVC-->>API: ok
+        API-->>Admin: 200 OK
+    end
+```
+
+### Diagrama de sequencia - Enviar Webhook()
+
+```mermaid
+
+sequenceDiagram
+    participant Caller as AtendimentoService
+    participant WH as Webhook
+    participant ConfRepo as WebhookConfigRepo (memoria)
+    participant Ext as Sistema Externo
+
+    Caller->>WH: enviar(payload)
+    WH->>ConfRepo: getURL()
+
+    alt url nao configurada
+        ConfRepo-->>WH: vazio/null
+        WH-->>Caller: ok (nao envia, loga)
+    else url configurada
+        ConfRepo-->>WH: url
+        WH->>Ext: POST url {payload}
+        alt falhou (timeout/erro)
+            Ext-->>WH: erro
+            WH-->>Caller: falha (loga e segue)
+        else sucesso
+            Ext-->>WH: 200 OK
+            WH-->>Caller: ok
+        end
+    end
 ```
