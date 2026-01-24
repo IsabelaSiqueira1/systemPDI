@@ -14,8 +14,49 @@ O elemento central da UML é o diagrama, que é uma representação gráfica do 
 
 ## Caso de uso (Estrutura comportamental)
 
-(em andamento)
-...
+O **diagrama de caso de uso** é um diagrama comportamental da UML que descreve **quais funcionalidades** um sistema oferece e **quem** (atores) interage com essas funcionalidades. Ele é usado para entender o sistema do ponto de vista do usuário e para alinhar requisitos sem entrar em detalhes de implementação.
+
+### Para que serve
+
+- Delimitar o **escopo** do sistema (o que está dentro e fora).
+- Identificar **funcionalidades** (casos de uso).
+- Identificar **atores** (tipos de usuários e sistemas externos).
+- Apoiar a escrita de **requisitos** e **cenários**.
+- Servir de base para outros diagramas (ex.: sequência).
+
+### Elementos principais
+
+- **Ator (Actor)**: entidade externa que interage com o sistema. Pode ser:
+  - Pessoa (usuário)
+  - Outro sistema (integração)
+  - Dispositivo
+- **Caso de uso (Use case)**: funcionalidade observável do sistema. Normalmente escrito como **verbo + objeto**, por exemplo: “Cadastrar X”, “Consultar Y”.
+- **Boundary (Sistema)**: caixa que representa a fronteira do sistema; tudo dentro dela é responsabilidade do software.
+- **Associação**: linha entre ator e caso de uso indicando participação.
+- **Relacionamentos entre casos de uso**:
+  - `<<include>>`: um caso de uso **sempre** reutiliza outro como parte do fluxo (obrigatório).
+  - `<<extend>>`: um caso de uso **pode** estender outro em uma condição específica (opcional/condicional).
+  - **Generalização**: ator ou caso de uso pode especializar outro (herança).
+
+### Como escrever um caso de uso (texto)
+
+Um caso de uso textual normalmente contém:
+
+- **Nome** (verbo + objeto)
+- **Ator principal**
+- **Objetivo**
+- **Pré-condições** (o que precisa ser verdade antes do fluxo)
+- **Fluxo principal** (passo a passo de sucesso)
+- **Fluxos alternativos / exceções** (erros, validações, situações alternativas)
+- _(Opcional)_ **Pós-condições** (estado final após sucesso)
+
+### Boas práticas
+
+- Descreva **o comportamento**, não a implementação (evite falar de banco, classes, tabelas, etc.).
+- Mantenha casos de uso focados (evite “casos gigantes”).
+- Use `include` para partes comuns repetidas.
+- Use `extend` quando algo acontece só em certos cenários.
+- Atores representam **papéis**, não pessoas específicas.
 
 ## Diagrama de classes (Estrutura estática)
 
@@ -160,3 +201,44 @@ Exemplo:
 Animal A <———————————— Peixe B
 
 ## Diagrama de Sequencia
+
+O **diagrama de sequência** é um diagrama comportamental da UML que mostra, ao longo do tempo, **a ordem das interações** (mensagens) entre um ator e os componentes do sistema para executar um cenário (geralmente um caso de uso ou parte dele).
+
+Ele detalha “como” um comportamento ocorre de forma temporal, sem precisar entrar no nível de código, mas já aproximando da implementação.
+
+### Para que serve
+
+- Entender a **ordem das chamadas**.
+- Explicitar **responsabilidades** entre camadas/objetos.
+- Identificar **validações**, retornos e ramificações (erros/alternativas).
+- Ajudar a planejar endpoints, serviços, módulos e integrações.
+
+### Elementos principais
+
+- **Participantes (lifelines)**: ator, objetos ou componentes que participam do fluxo.
+- **Mensagens**: setas representando chamadas:
+  - Chamada síncrona (espera resposta)
+  - Chamada assíncrona (não espera)
+- **Ativações**: períodos em que um participante está executando algo.
+- **Retornos**: respostas para mensagens (opcional desenhar, mas útil).
+- **Fragmentos combinados**:
+  - `alt`: caminhos alternativos (if/else)
+  - `opt`: bloco opcional (if simples)
+  - `loop`: repetição
+  - `par`: paralelo
+
+### Como montar um diagrama de sequência a partir de um caso de uso
+
+1. Escolha o **cenário**: normalmente o **fluxo principal** do caso de uso.
+2. Liste os **participantes** envolvidos (ator + componentes).
+3. Transforme cada passo do fluxo em **mensagens** entre participantes.
+4. Para cada exceção/validação, use `alt/opt` com o resultado esperado.
+5. Finalize com o retorno de sucesso e as possíveis respostas de erro.
+
+### Boas práticas
+
+- Não desenhe “tudo do sistema” em um diagrama: escolha um cenário.
+- Mantenha nomes de mensagens claros (ações/verbos).
+- Valide e trate erros nos pontos onde realmente acontecem.
+- Use `alt` para exceções importantes (não precisa de todas as micro-validações).
+- O diagrama deve ser legível: se ficou gigante, divida em mais diagramas.
