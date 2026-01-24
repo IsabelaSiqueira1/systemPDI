@@ -8,9 +8,9 @@ A linguagem não é um método ou uma linguagem de desenvolvimento, ou seja, voc
 
 O elemento central da UML é o diagrama, que é uma representação gráfica do modelo de um sistema. Os diagramas permitem representar o sistema de duas maneiras distintas: estática (estrutural) ou dinâmica (comportamental).
 
-# 1. Diagramas Estruturais: Diagramas que mostram a estrutura estática do sistema, incluindo objetos, operações, atributos e métodos. Exemplos incluem o diagrama de classes, objeto, componente e pacote.
+### 1. Diagramas Estruturais: Diagramas que mostram a estrutura estática do sistema, incluindo objetos, operações, atributos e métodos. Exemplos incluem o diagrama de classes, objeto, componente e pacote.
 
-# 2. Diagramas Comportamentais: Mostram o comportamento dinâmico e o funcionamento do sistema, por meio da colaboração dos objetos e da mudança de estados internos. Exemplos incluem o diagrama de casos de uso, sequência, comunicação e atividade.
+### 2. Diagramas Comportamentais: Mostram o comportamento dinâmico e o funcionamento do sistema, por meio da colaboração dos objetos e da mudança de estados internos. Exemplos incluem o diagrama de casos de uso, sequência, comunicação e atividade.
 
 ## Caso de uso (Estrutura comportamental)
 
