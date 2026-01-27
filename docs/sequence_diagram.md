@@ -14,7 +14,7 @@ A sequência completa de mensagens entre **ator → API → camada de aplicaçã
 - **API/Controller**: valida request básica e delega.
 - **AtendimentoService**: coordena o fluxo (orquestra as chamadas).
 - **Servico/Fila**: aplicam regras de domínio (buscar profissional, status, escolher ficha).
-- **Webhook/WebhookConfig**: tenta notificar sistema externo (best-effort).
+- **Webhook/WebhookConfig**: tenta notificar sistema externo.
 
 ### Entrada e saída
 
@@ -35,8 +35,8 @@ A sequência completa de mensagens entre **ator → API → camada de aplicaçã
 ### Decisões de modelagem
 
 - O webhook é **best-effort**: falhar webhook não deve bloquear o atendimento.
-- A escolha da ficha acontece **dentro da Fila** (Priority → Medium → Low + FIFO).
-- Controle de concorrência é responsabilidade da implementação (ex.: lock por serviço/fila).
+- A escolha da ficha acontece **dentro da Fila** (Priority → Medium → Low).
+- Controle de concorrência é responsabilidade da implementação.
 
 ```mermaid
 
@@ -149,7 +149,6 @@ O encerramento de um atendimento em andamento, registrando `fimEm` e liberando o
 
 - Encerrar atendimento não consulta fila.
 - Se status for OCUPADO mas não existir atendimento em aberto, isso é tratado como inconsistência (erro + log).
-- Pode ser interessante garantir idempotência (se já encerrou, não encerrar duas vezes).
 
 ```mermaid
 

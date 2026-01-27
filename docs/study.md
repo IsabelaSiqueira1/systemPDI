@@ -38,7 +38,7 @@ O **diagrama de caso de uso** é um diagrama comportamental da UML que descreve 
   - `<<extend>>`: um caso de uso **pode** estender outro em uma condição específica (opcional/condicional).
   - **Generalização**: ator ou caso de uso pode especializar outro (herança).
 
-### Como escrever um caso de uso (texto)
+### Como escrever um caso de uso
 
 Um caso de uso textual normalmente contém:
 
@@ -49,14 +49,6 @@ Um caso de uso textual normalmente contém:
 - **Fluxo principal** (passo a passo de sucesso)
 - **Fluxos alternativos / exceções** (erros, validações, situações alternativas)
 - _(Opcional)_ **Pós-condições** (estado final após sucesso)
-
-### Boas práticas
-
-- Descreva **o comportamento**, não a implementação (evite falar de banco, classes, tabelas, etc.).
-- Mantenha casos de uso focados (evite “casos gigantes”).
-- Use `include` para partes comuns repetidas.
-- Use `extend` quando algo acontece só em certos cenários.
-- Atores representam **papéis**, não pessoas específicas.
 
 ## Diagrama de classes (Estrutura estática)
 
@@ -234,11 +226,3 @@ Ele detalha “como” um comportamento ocorre de forma temporal, sem precisar e
 3. Transforme cada passo do fluxo em **mensagens** entre participantes.
 4. Para cada exceção/validação, use `alt/opt` com o resultado esperado.
 5. Finalize com o retorno de sucesso e as possíveis respostas de erro.
-
-### Boas práticas
-
-- Não desenhe “tudo do sistema” em um diagrama: escolha um cenário.
-- Mantenha nomes de mensagens claros (ações/verbos).
-- Valide e trate erros nos pontos onde realmente acontecem.
-- Use `alt` para exceções importantes (não precisa de todas as micro-validações).
-- O diagrama deve ser legível: se ficou gigante, divida em mais diagramas.
