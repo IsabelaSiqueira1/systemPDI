@@ -9,6 +9,7 @@ classDiagram
 class Servico {
   +UUID id
   +String name
+  +Fila fila
   +List~Profissional~ profissionais
 }
 
@@ -48,15 +49,14 @@ class Atendimento {
 }
 
 class Webhook {
-  +StatusWebhook status
-  +enviar(payload) ResultadoWebhook
+  +enviar(payload) void
 }
 
 class WebhookConfig {
   +String url
 }
 
-%% Enums (como classes simples para evitar erro no draw.io)
+%% Enums
 class CategoriaAtendimento {
   <<enum>>
   Priority
@@ -71,23 +71,12 @@ class StatusProfissional {
   INDISPONIVEL
 }
 
-class StatusWebhook {
-  <<enum>>
-  SUCESSO
-  ERRO
-  NAO_CONFIGURADO
-}
-
-class ResultadoWebhook {
-  <<enum>>
-  SUCESSO
-  FALHA
-}
-
 %% Relacionamentos
 Servico "1" *-- "1" Fila : possui
-Servico "1" o-- "0..*" Ficha : emite
-Servico "1" o-- "0..*" Profissional : possui
+Fila "1" *-- "0..*" Ficha : enfileira
+
+Servico "1" o-- "0..*" Ficha : possui
+Servico "0..1" o-- "0..*" Profissional : vincula
 Servico "1" o-- "0..*" Atendimento : registra
 
 Profissional "1" o-- "0..*" Atendimento : realiza
@@ -116,12 +105,13 @@ Atributos
 - id: UUID
 - name: String
 - profissionais: List<Profissional>
+- Fila fila
 
 Regras de Negócio associadas
 
 - Um serviço possui exatamente 1 fila prioritária.
 - As fichas emitidas para um serviço entram apenas na fila daquele serviço.
-- O atendimento respeita prioridade: IMEDIATO > MÉDIA > BAIXA (sem furar), e FIFO dentro da mesma categoria.
+- O atendimento respeita prioridade: Priority → Medium → Low (sem furar), e FIFO dentro da mesma categoria.
 - O profissional só pode chamar próximo cliente do serviço ao qual está vinculado.
 
 ## 2. Fila
@@ -138,10 +128,10 @@ Metodos
 
 - adicionaFicha(f: Ficha) - Adiciona a ficha na fila correspondente à categoria.
 - chamarProximo(): Ficha - Retorna e remove a próxima ficha respeitando:
-  - imediata se não estiver vazia
-  - senão media se não estiver vazia
-  - senão baixa se não estiver vazia
-  - se todas vazias, retorna erro/sem ficha
+  - se Priority não vazia → retorna dela
+  - senão se Medium não vazia → retorna dela
+  - senão se Low não vazia → retorna dela
+  - se todas vazias → “sem ficha” (erro / nil / vazio)
 
 ## 2. Ficha
 
@@ -180,6 +170,8 @@ Metodos
 
 Regras
 
+- Um profissional pode existir sem serviço vinculado (idService = null).
+- Status inicial recomendado ao cadastrar: INDISPONIVEL.
 - Só pode chamar próximo cliente se estiver DISPONIVEL.
 - Se estiver OCUPADO, deve encerrar o atendimento antes de chamar outro.
 - Se estiver INDISPONIVEL, não pode chamar próximo nem encerrar atendimento.
@@ -211,7 +203,9 @@ atributos
 
 metodos
 
-- enviar(payload): ResultadoWebhook
+- enviar(payload): void
+  - tenta enviar HTTP para a URL configurada
+  - se falhar, registra log e não bloqueia a criação do atendimento
 
 ## WebhookConfig
 
@@ -219,53 +213,57 @@ Atributos
 
 - url: string
 
+## Enums
+
+## CategoriaAtendimento
+
+- Priority
+- Medium
+- Low
+
+## StatusProfissional
+
+- DISPONIVEL
+- OCUPADO
+- INDISPONIVEL
+
 ## Relacionamentos
 
-Serviço —— Fila
+### Serviço — Fila
 
-Cada serviço possui exatamente 1 fila prioritária
-Service 1 —— 1 Fila
+Cada serviço possui exatamente 1 fila
+Servico 1 —— 1 Fila
 
----
+### Serviço — Ficha
 
-Serviço —— Ficha
+Um serviço possui muitas fichas (histórico / emitidas)
+Servico 1 —— 0..\* Ficha
 
-Um serviço possui muitas fichas
-Service 1 —— 0..\* Ficha
+### Serviço — Profissional
 
----
+Um serviço pode ter muitos profissionais vinculados
+Um profissional pode estar vinculado a 0 ou 1 serviço (até vincular)
+Servico 0..1 —— 0..\* Profissional
 
-Serviço —— Profissional
+### Profissional — Atendimento
 
-Um serviço possui muitos profissionais
-Service 1 —— 0..\* Profissional
-
----
-
-Profissional —— Atendimento
 Um profissional pode realizar muitos atendimentos
-
----
-
 Profissional 1 —— 0..\* Atendimento
 
----
+### Ficha — Atendimento
 
-Ficha —— Atendimento
-
----
-
+Uma ficha gera no máximo 1 atendimento
 Ficha 1 —— 0..1 Atendimento
 
----
+### Serviço — Atendimento
 
-Serviço —— Atendimento
+Um serviço registra muitos atendimentos
+Servico 1 —— 0..\* Atendimento
 
----
+### Webhook — WebhookConfig
 
-Service 1 —— 0..\* Atendimento
-
----
+O webhook usa a configuração para obter a URL
+Webhook ..> WebhookConfig
 
 ```
 

@@ -354,7 +354,7 @@ Exceções:
 
 ## Configurar a URL do Weebhook
 
-Ator:Administrador
+Ator: Administrador
 Objetivo: Configurar o endpoint para onde os webhooks serão enviados.
 
 Fluxo principal:

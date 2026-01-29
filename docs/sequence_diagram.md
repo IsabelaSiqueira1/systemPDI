@@ -10,33 +10,37 @@ A sequência completa de mensagens entre **ator → API → camada de aplicaçã
 
 ### Participantes e papel
 
-- **Ator**: dispara a ação.
-- **API/Controller**: valida request básica e delega.
-- **AtendimentoService**: coordena o fluxo (orquestra as chamadas).
-- **Servico/Fila**: aplicam regras de domínio (buscar profissional, status, escolher ficha).
-- **Webhook/WebhookConfig**: tenta notificar sistema externo.
+- Ator: dispara a ação.
+- API/Controller: valida request básica e delega.
+- AtendimentoService: coordena o fluxo (orquestra as chamadas).
+- ProfissionalRepo: recupera o profissional e seu status (profissional existe mesmo sem serviço vinculado).
+- Servico: valida vínculo do profissional com o serviço (ex.: profissional.idService == servico.id) e dá acesso à fila.
+- Fila: aplica regra de prioridade (Priority → Medium → Low + FIFO).
+- Webhook/WebhookConfig: tenta notificar sistema externo.
 
 ### Entrada e saída
 
-- **Entrada mínima**: `idServico`, `idProfissional`
-- **Saída de sucesso**: dados do atendimento criado
-- **Erros que interrompem o fluxo**: serviço inexistente, profissional inválido/não autorizado, profissional não disponível, fila vazia, falha ao criar atendimento
-- **Erros que não interrompem**: falha no webhook / URL não configurada (apenas log)
+- Entrada mínima: `idServico`, `idProfissional`
+- Saída de sucesso: dados do atendimento criado
+- Erros que interrompem o fluxo: serviço inexistente, profissional inválido/não autorizado, profissional não disponível, fila vazia, falha ao criar atendimento
+- Erros que não interrompem: falha no webhook / URL não configurada (apenas log)
 
 ### Pontos de decisão (alts)
 
 1. Serviço existe?
-2. Profissional pertence ao serviço?
-3. Profissional está DISPONIVEL?
-4. Fila tem ficha?
-5. Webhook tem URL configurada?
-6. Chamada do webhook foi bem sucedida?
+2. Profissional existe?
+3. Profissional está vinculado ao serviço?
+4. Profissional está DISPONIVEL?
+5. Fila tem ficha?
+6. Webhook tem URL configurada?
+7. Chamada do webhook foi bem sucedida?
 
 ### Decisões de modelagem
 
-- O webhook é **best-effort**: falhar webhook não deve bloquear o atendimento.
-- A escolha da ficha acontece **dentro da Fila** (Priority → Medium → Low).
+- O webhook: falhar webhook não deve bloquear o atendimento.
+- A escolha da ficha acontece dentro da Fila (Priority → Medium → Low).
 - Controle de concorrência é responsabilidade da implementação.
+- A validação de vínculo do profissional é feita pelo idService do profissional (ele pode existir com idService = null até se vincular).
 
 ```mermaid
 
@@ -44,7 +48,8 @@ sequenceDiagram
     actor Prof as Profissional
     participant API as "API (AtendimentosController)"
     participant SVC as "AtendimentoService"
-    participant Repo as "ServicoRepo (memoria)"
+    participant SRepo as "ServicoRepo (memoria)"
+    participant PRepo as "ProfissionalRepo (memoria)"
     participant Serv as "Servico"
     participant Fila as "Fila (do servico)"
     participant ARepo as "AtendimentoRepo (memoria)"
@@ -52,66 +57,74 @@ sequenceDiagram
     participant WHC as "WebhookConfig"
     participant Ext as "Sistema Externo"
 
-    Prof->>API: POST /v1/servicos/{id}/chamar-proximo {idProfissional}
+    Prof->>API: POST /v1/servicos/{idServico}/chamar-proximo {idProfissional}
     API->>SVC: chamarProximo(idServico, idProfissional)
 
-    SVC->>Repo: buscarServico(idServico)
+    SVC->>SRepo: buscarServico(idServico)
     alt servico nao existe
-        Repo-->>SVC: null
+        SRepo-->>SVC: null
         SVC-->>API: erro 404 (servico nao encontrado)
         API-->>Prof: 404
     else servico existe
-        Repo-->>SVC: Servico
+        SRepo-->>SVC: Servico
 
-        SVC->>Serv: buscarProfissional(idProfissional)
-        alt profissional nao pertence ao servico
-            Serv-->>SVC: erro
-            SVC-->>API: erro 403 (nao permitido)
-            API-->>Prof: 403
-        else profissional ok
-            Serv-->>SVC: Profissional (modelo)
+        SVC->>PRepo: buscarProfissional(idProfissional)
+        alt profissional nao existe
+            PRepo-->>SVC: null
+            SVC-->>API: erro 404 (profissional nao encontrado)
+            API-->>Prof: 404
+        else profissional existe
+            PRepo-->>SVC: Profissional
 
-            SVC->>Serv: statusDoProfissional(idProfissional)
-            alt status != DISPONIVEL (OCUPADO ou INDISPONIVEL)
-                Serv-->>SVC: status
-                SVC-->>API: erro 409 (profissional indisponivel)
-                API-->>Prof: 409
-            else status == DISPONIVEL
-                Serv-->>SVC: DISPONIVEL
+            SVC->>PRepo: validarVinculo(idProfissional, idServico)
+            alt profissional nao vinculado ao servico
+                SVC-->>API: erro 403 (nao permitido)
+                API-->>Prof: 403
+            else vinculo ok
 
-                SVC->>Fila: chamarProximo() (Priority -> Medium -> Low)
-                alt fila vazia
-                    Fila-->>SVC: sem ficha
-                    SVC-->>API: erro 404/409 (fila vazia)
-                    API-->>Prof: 404/409
-                else tem ficha
-                    Fila-->>SVC: ficha
+                SVC->>PRepo: statusDoProfissional(idProfissional)
+                alt status != DISPONIVEL (OCUPADO ou INDISPONIVEL)
+                    SVC-->>API: erro 409 (profissional indisponivel)
+                    API-->>Prof: 409
+                else status == DISPONIVEL
 
-                    SVC->>ARepo: criarAtendimento(idServico,idProf,idFicha,inicioEm=agora)
-                    ARepo-->>SVC: atendimento
+                    SVC->>Serv: obterFila()
+                    Serv-->>SVC: Fila
 
-                    SVC->>Serv: marcarProfissionalOcupado(idProfissional)
+                    SVC->>Fila: chamarProximo() (Priority -> Medium -> Low)
+                    alt fila vazia
+                        Fila-->>SVC: sem ficha
+                        SVC-->>API: erro 409 (fila vazia)
+                        API-->>Prof: 409
+                    else tem ficha
+                        Fila-->>SVC: ficha
 
-                    SVC->>WH: enviar(payload)
-                    WH->>WHC: getURL()
+                        SVC->>ARepo: criarAtendimento(idServico,idProf,idFicha,inicioEm=agora)
+                        ARepo-->>SVC: atendimento
 
-                    alt URL nao configurada
-                        WHC-->>WH: vazio
-                        WH-->>SVC: nao envia (loga e segue)
-                    else URL configurada
-                        WHC-->>WH: url
-                        WH->>Ext: POST url {payload}
-                        alt webhook falhou (timeout/erro)
-                            Ext-->>WH: erro
-                            WH-->>SVC: falha (loga e segue)
-                        else webhook ok
-                            Ext-->>WH: 200 OK
-                            WH-->>SVC: ok
+                        SVC->>PRepo: atualizarStatus(idProfissional, OCUPADO)
+
+                        SVC->>WH: enviar(payload)
+                        WH->>WHC: getURL()
+
+                        alt URL nao configurada
+                            WHC-->>WH: vazio
+                            WH-->>SVC: nao envia (loga e segue)
+                        else URL configurada
+                            WHC-->>WH: url
+                            WH->>Ext: POST url {payload}
+                            alt webhook falhou (timeout/erro)
+                                Ext-->>WH: erro
+                                WH-->>SVC: falha (loga e segue)
+                            else webhook ok
+                                Ext-->>WH: 200 OK
+                                WH-->>SVC: ok
+                            end
                         end
-                    end
 
-                    SVC-->>API: atendimentoDTO
-                    API-->>Prof: 200 OK + JSON
+                        SVC-->>API: atendimentoDTO
+                        API-->>Prof: 200 OK + JSON
+                    end
                 end
             end
         end
@@ -126,24 +139,27 @@ O encerramento de um atendimento em andamento, registrando `fimEm` e liberando o
 
 ### Participantes e papel
 
-- **Ator**: solicita encerramento.
-- **API/Controller**: recebe e delega.
-- **AtendimentoService**: coordena validações e atualização.
-- **Servico**: valida vínculo e status do profissional.
-- **AtendimentoRepo**: localiza e atualiza o atendimento em aberto.
+- Ator: solicita encerramento.
+- API/Controller: recebe e delega.
+- AtendimentoService: coordena validações e atualização.
+- ProfissionalRepo: busca profissional e status.
+- ServicoRepo/Servico: valida que o serviço existe e que o vínculo do profissional é com aquele serviço.
+- AtendimentoRepo: localiza e atualiza o atendimento em aberto.
+- AtendimentoRepo: localiza e atualiza o atendimento em aberto.
 
 ### Entrada e saída
 
-- **Entrada mínima**: `idServico`, `idProfissional`
-- **Saída de sucesso**: confirmação (200 OK) e/ou atendimento atualizado
-- **Erros que interrompem**: serviço inexistente, profissional não autorizado, profissional não OCUPADO, atendimento em aberto não encontrado, erro interno
+- Entrada mínima: `idServico`, `idProfissional`
+- Saída de sucesso: confirmação (200 OK) e/ou atendimento atualizado
+- Erros que interrompem: serviço inexistente, profissional não autorizado, profissional não OCUPADO, atendimento em aberto não encontrado, erro interno
 
 ### Pontos de decisão (alts)
 
 1. Serviço existe?
-2. Profissional pertence ao serviço?
-3. Profissional está OCUPADO?
-4. Existe atendimento em aberto para encerrar?
+2. Profissional existe?
+3. Profissional pertence ao serviço?
+4. Profissional está OCUPADO?
+5. Existe atendimento em aberto para encerrar?
 
 ### Decisões de modelagem
 
@@ -153,55 +169,60 @@ O encerramento de um atendimento em andamento, registrando `fimEm` e liberando o
 ```mermaid
 
 sequenceDiagram
-actor Prof as Profissional
-participant API as API (AtendimentosController)
-participant SVC as AtendimentoService
-participant Repo as ServicoRepo (memoria)
-participant Serv as Servico
-participant ARepo as AtendimentoRepo (memoria)
+    actor Prof as Profissional
+    participant API as "API (AtendimentosController)"
+    participant SVC as "AtendimentoService"
+    participant SRepo as "ServicoRepo (memoria)"
+    participant PRepo as "ProfissionalRepo (memoria)"
+    participant ARepo as "AtendimentoRepo (memoria)"
 
-    Prof->>API: PUT /v1/servicos/{id}/encerrar-atendimento {idProfissional}
+    Prof->>API: PUT /v1/servicos/{idServico}/encerrar-atendimento {idProfissional}
     API->>SVC: encerrarAtendimento(idServico, idProfissional)
 
-    SVC->>Repo: buscarServico(idServico)
+    SVC->>SRepo: buscarServico(idServico)
     alt servico nao existe
-        Repo-->>SVC: null
+        SRepo-->>SVC: null
         SVC-->>API: erro 404 (servico nao encontrado)
         API-->>Prof: 404
     else servico existe
-        Repo-->>SVC: Servico
+        SRepo-->>SVC: Servico
 
-        SVC->>Serv: buscarProfissional(idProfissional)
-        alt profissional nao pertence ao servico
-            Serv-->>SVC: erro
-            SVC-->>API: erro 403 (nao permitido)
-            API-->>Prof: 403
-        else profissional ok
-            Serv-->>SVC: Profissional
+        SVC->>PRepo: buscarProfissional(idProfissional)
+        alt profissional nao existe
+            PRepo-->>SVC: null
+            SVC-->>API: erro 404 (profissional nao encontrado)
+            API-->>Prof: 404
+        else profissional existe
+            PRepo-->>SVC: Profissional
 
-            SVC->>Serv: statusDoProfissional(idProfissional)
-            alt status != OCUPADO (DISPONIVEL ou INDISPONIVEL)
-                Serv-->>SVC: status
-                SVC-->>API: erro 409 (nao ha atendimento em andamento)
-                API-->>Prof: 409
-            else status == OCUPADO
-                Serv-->>SVC: OCUPADO
+            SVC->>PRepo: validarVinculo(idProfissional, idServico)
+            alt profissional nao vinculado ao servico
+                SVC-->>API: erro 403 (nao permitido)
+                API-->>Prof: 403
+            else vinculo ok
 
-                SVC->>ARepo: buscarAtendimentoEmAberto(idServico, idProfissional)
-                alt nao encontrou atendimento em aberto
-                    ARepo-->>SVC: null
-                    SVC-->>API: erro 500/409 (inconsistencia)
-                    API-->>Prof: 500/409
-                else encontrou atendimento
-                    ARepo-->>SVC: atendimento
+                SVC->>PRepo: statusDoProfissional(idProfissional)
+                alt status != OCUPADO (DISPONIVEL ou INDISPONIVEL)
+                    SVC-->>API: erro 409 (nao ha atendimento em andamento)
+                    API-->>Prof: 409
+                else status == OCUPADO
 
-                    SVC->>ARepo: encerrarAtendimento(atendimento.id, fimEm=agora)
-                    ARepo-->>SVC: ok
+                    SVC->>ARepo: buscarAtendimentoEmAberto(idServico, idProfissional)
+                    alt nao encontrou atendimento em aberto
+                        ARepo-->>SVC: null
+                        SVC-->>API: erro 409/500 (inconsistencia)
+                        API-->>Prof: 409/500
+                    else encontrou atendimento
+                        ARepo-->>SVC: atendimento
 
-                    SVC->>Serv: marcarProfissionalDisponivel(idProfissional)
+                        SVC->>ARepo: encerrarAtendimento(atendimento.id, fimEm=agora)
+                        ARepo-->>SVC: ok
 
-                    SVC-->>API: 200 OK
-                    API-->>Prof: 200 OK
+                        SVC->>PRepo: atualizarStatus(idProfissional, DISPONIVEL)
+
+                        SVC-->>API: 200 OK
+                        API-->>Prof: 200 OK
+                    end
                 end
             end
         end
@@ -216,17 +237,18 @@ A emissão de uma ficha por um cliente, com validação de entrada e inclusão d
 
 #### Participantes e papel
 
-- **Ator**: solicita emissão.
-- **API/Controller**: recebe requisição e delega.
-- **FichaService**: coordena validações e criação da ficha.
-- **ServicoRepo/Servico**: garante que o serviço existe e gera a ficha.
-- **Fila**: recebe a ficha na fila correspondente.
+- Ator: solicita emissão.
+- API/Controller: recebe requisição e delega.
+- FichaService: coordena validações e criação da ficha.
+- FichaService: cria a ficha (gera id, data, idService).
+- ServicoRepo/Servico: garante que o serviço existe e dá acesso à fila do serviço.
+- Fila: adiciona a ficha na fila correta.
 
 #### Entrada e saída
 
-- **Entrada mínima**: `idServico`, `nomeCliente`, `categoria`
-- **Saída de sucesso**: ficha criada (ex.: `201`)
-- **Erros que interrompem**: nome inválido, categoria inválida, serviço inexistente, erro interno ao manipular fila/memória
+- Entrada mínima: `idServico`, `nomeCliente`, `categoria`
+- Saída de sucesso: ficha criada
+- Erros que interrompem: nome inválido, categoria inválida, serviço inexistente, erro interno ao manipular fila/memória
 
 #### Pontos de decisão (alts)
 
@@ -242,12 +264,12 @@ A emissão de uma ficha por um cliente, com validação de entrada e inclusão d
 ```mermaid
 
 sequenceDiagram
-actor Cli as Cliente
-participant API as API (FichasController)
-participant SVC as FichaService
-participant Repo as ServicoRepo (memoria)
-participant Serv as Servico
-participant Fila as Fila (do servico)
+    actor Cli as Cliente
+    participant API as "API (FichasController)"
+    participant SVC as "FichaService"
+    participant Repo as "ServicoRepo (memoria)"
+    participant Serv as "Servico"
+    participant Fila as "Fila (do servico)"
 
     Cli->>API: POST /v1/servicos/{id}/fichas {nomeCliente, categoria}
     API->>SVC: emitirFicha(idServico, nomeCliente, categoria)
@@ -268,8 +290,8 @@ participant Fila as Fila (do servico)
             else servico existe
                 Repo-->>SVC: Servico
 
-                SVC->>Serv: gerarFicha(nomeCliente, categoria, agora)
-                Serv-->>SVC: ficha
+                SVC->>SVC: criarFicha(idServico, nomeCliente, categoria, agora)
+                SVC-->>SVC: ficha
 
                 SVC->>Fila: adicionarFicha(ficha)
                 Fila-->>SVC: ok
@@ -280,6 +302,378 @@ participant Fila as Fila (do servico)
         end
     end
 
+```
+
+## Diagrama de sequência — Cadastrar Profissional()
+
+#### O que este diagrama mostra
+
+O cadastro de um profissional no sistema, com validação do nome e persistência em memória.
+
+#### Participantes e papel
+
+- Ator: solicita o cadastro.
+- API/Controller: recebe a requisição e delega.
+- ProfissionalService: valida regras e coordena a criação.
+- ProfissionalRepo: salva o profissional criado.
+
+#### Entrada e saída
+
+- Entrada mínima: nome
+- Saída de sucesso: profissional criado (201)
+- Erros que interrompem: nome inválido, duplicidade, falha interna ao salvar
+
+#### Pontos de decisão (alts)
+
+1. Nome é válido?
+2. Profissional duplicado?
+
+#### Decisões de modelagem
+
+- Profissional é criado com:
+- status = INDISPONIVEL
+- idService = null
+
+```mermaid
+
+sequenceDiagram
+    actor Admin as Administrador
+    participant API as "API (ProfissionaisController)"
+    participant SVC as "ProfissionalService"
+    participant Repo as "ProfissionalRepo (memoria)"
+
+    Admin->>API: POST /v1/profissionais {nome}
+    API->>SVC: cadastrarProfissional(nome)
+
+    alt nome vazio ou so espacos
+        SVC-->>API: erro 400 (nome invalido)
+        API-->>Admin: 400
+    else nome ok
+        opt regra de duplicidade por nome (opcional)
+            SVC->>Repo: existePorNome(nome)?
+            alt ja existe
+                Repo-->>SVC: true
+                SVC-->>API: erro 409 (profissional ja existe)
+                API-->>Admin: 409
+            else nao existe
+                Repo-->>SVC: false
+            end
+        end
+
+        SVC->>SVC: criarProfissional(id, nome, status=INDISPONIVEL, idService=null)
+        SVC->>Repo: salvar(profissional)
+        alt falha ao salvar
+            Repo-->>SVC: erro
+            SVC-->>API: erro 500 (falha interna)
+            API-->>Admin: 500
+        else salvo com sucesso
+            Repo-->>SVC: profissionalCriado
+            SVC-->>API: profissionalDTO
+            API-->>Admin: 201 Created + JSON
+        end
+    end
+```
+
+## Diagrama de sequência — Vincular Profissional a um Serviço()
+
+#### O que este diagrama mostra
+
+O fluxo onde o profissional seleciona um serviço disponível para atuar, registrando o vínculo (profissional.idService = servico.id).
+
+#### Participantes e papel
+
+- Ator: solicita o vínculo.
+- API/Controller: recebe e delega.
+- ProfissionalService: coordena validações e atualização do vínculo.
+- ProfissionalRepo: busca e atualiza o profissional.
+- ServicoRepo: valida que o serviço existe.
+
+#### Entrada e saída
+
+- Entrada mínima: idProfissional, idServico
+- Saída de sucesso: confirmação (200 OK) e/ou profissional atualizado
+- Erros que interrompem: profissional inexistente, serviço inexistente, profissional OCUPADO, erro interno ao atualizar
+
+#### Pontos de decisão (alts)
+
+1. Profissional existe?
+2. Serviço existe?
+3. Profissional está OCUPADO?
+
+### Decisões de modelagem
+
+- Se o profissional estiver OCUPADO, não pode trocar de serviço.
+- Se profissional.idService já estiver preenchido → bloquear (409).
+
+```mermaid
+
+sequenceDiagram
+    actor Prof as Profissional
+    participant API as "API (ProfissionaisController)"
+    participant SVC as "ProfissionalService"
+    participant PRepo as "ProfissionalRepo (memoria)"
+    participant SRepo as "ServicoRepo (memoria)"
+
+    Prof->>API: PUT /v1/profissionais/{idProf}/vincular-servico {idServico}
+    API->>SVC: vincularServico(idProfissional, idServico)
+
+    SVC->>PRepo: buscarProfissional(idProfissional)
+    alt profissional nao existe
+        PRepo-->>SVC: null
+        SVC-->>API: erro 404 (profissional nao encontrado)
+        API-->>Prof: 404
+    else profissional existe
+        PRepo-->>SVC: Profissional
+
+        alt profissional ja possui servico vinculado (idService != null)
+            SVC-->>API: erro 409 (profissional ja vinculado a um servico)
+            API-->>Prof: 409
+        else sem servico vinculado
+            SVC->>SRepo: buscarServico(idServico)
+            alt servico nao existe
+                SRepo-->>SVC: null
+                SVC-->>API: erro 404 (servico nao encontrado)
+                API-->>Prof: 404
+            else servico existe
+                SRepo-->>SVC: Servico
+
+                alt status == OCUPADO
+                    SVC-->>API: erro 409 (profissional em atendimento)
+                    API-->>Prof: 409
+                else status != OCUPADO
+                    SVC->>PRepo: atualizarServicoDoProfissional(idProfissional, idServico)
+                    alt falha ao atualizar
+                        PRepo-->>SVC: erro
+                        SVC-->>API: erro 500 (falha interna)
+                        API-->>Prof: 500
+                    else atualizado com sucesso
+                        PRepo-->>SVC: ProfissionalAtualizado
+                        SVC-->>API: 200 OK (profissional atualizado)
+                        API-->>Prof: 200 OK + JSON
+                    end
+                end
+            end
+        end
+    end
+```
+
+## Diagrama de sequência — Iniciar Expediente()
+
+#### O que este diagrama mostra
+
+O fluxo para um profissional iniciar o expediente, mudando seu status para DISPONIVEL, após validar: serviço existe, profissional existe, vínculo com o serviço e status atual (não pode estar OCUPADO).
+
+#### Participantes e papel
+
+- Ator (Profissional): solicita iniciar expediente.
+- API/Controller (ProfissionaisController): recebe a requisição e delega para a camada de aplicação.
+- ProfissionalService: orquestra as validações e a mudança de status.
+- ServicoRepo: busca o serviço.
+- ProfissionalRepo: busca e atualiza o profissional.
+
+#### Entrada e saída
+
+- Entrada mínima: idServico, idProfissional
+- Saída de sucesso: 200 OK (profissional com status=DISPONIVEL)
+- Erros que interrompem:
+  - serviço inexistente (404)
+  - serviço inexistente (404)
+  - profissional inexistente (404)
+  - profissional não vinculado ao serviço (403)
+  - profissional OCUPADO (409)
+  - falha interna ao atualizar (500)
+
+#### Pontos de decisão (alts)
+
+1. Serviço existe?
+2. Profissional existe?
+3. Profissional está vinculado ao serviço?
+4. Profissional está OCUPADO?
+5. Atualização do status ocorreu com sucesso?
+
+## Decisões de modelagem
+
+- Iniciar expediente não cria atendimento, apenas muda status para DISPONIVEL.
+- A validação de vínculo é feita comparando prof.idService com idServico.
+- O status OCUPADO bloqueia a operação (não faz sentido iniciar expediente “em atendimento”).
+
+```mermaid
+
+sequenceDiagram
+    actor Prof as Profissional
+    participant API as "API (ProfissionaisController)"
+    participant SVC as "ProfissionalService"
+    participant PRepo as "ProfissionalRepo (memoria)"
+    participant SRepo as "ServicoRepo (memoria)"
+
+    Prof->>API: PUT /v1/servicos/{idServico}/profissionais/{idProfissional}/iniciar-expediente
+    API->>SVC: iniciarExpediente(idServico, idProfissional)
+
+    SVC->>SRepo: buscarServico(idServico)
+    alt servico nao existe
+        SRepo-->>SVC: null
+        SVC-->>API: erro 404 (servico nao encontrado)
+        API-->>Prof: 404
+    else servico existe
+        SRepo-->>SVC: Servico
+
+        SVC->>PRepo: buscarProfissional(idProfissional)
+        alt profissional nao existe
+            PRepo-->>SVC: null
+            SVC-->>API: erro 404 (profissional nao encontrado)
+            API-->>Prof: 404
+        else profissional existe
+            PRepo-->>SVC: Profissional
+
+            alt profissional nao vinculado ao servico (prof.idService != idServico)
+                SVC-->>API: erro 403 (profissional nao pertence ao servico)
+                API-->>Prof: 403
+            else vinculo ok
+                alt status == OCUPADO
+                    SVC-->>API: erro 409 (encerre atendimento antes de iniciar expediente)
+                    API-->>Prof: 409
+                else status != OCUPADO
+                    SVC->>PRepo: atualizarStatus(idProfissional, DISPONIVEL)
+                    alt falha ao atualizar status
+                        PRepo-->>SVC: erro
+                        SVC-->>API: erro 500 (falha interna)
+                        API-->>Prof: 500
+                    else atualizado
+                        PRepo-->>SVC: ProfissionalAtualizado
+                        SVC-->>API: 200 OK (status=DISPONIVEL)
+                        API-->>Prof: 200 OK + JSON
+                    end
+                end
+            end
+        end
+    end
+```
+
+## Diagrama de sequência — Encerrar Expediente()
+
+#### O que este diagrama mostra
+
+O fluxo para um profissional encerrar o expediente, mudando seu status para INDISPONIVEL, com validações de:
+
+- serviço existe
+- profissional existe e está vinculado ao serviço
+- profissional não pode estar OCUPADO
+- regra extra: se ele for o último DISPONIVEL do serviço e ainda existir cliente na fila, bloqueia o encerramento.
+
+#### Participantes e papel
+
+- Ator (Profissional): solicita encerrar expediente.
+- API/Controller (ProfissionaisController): recebe a requisição e delega.
+- ProfissionalService: orquestra validações + aplicação das regras.
+- ServicoRepo: busca o serviço.
+- ProfissionalRepo: busca e atualiza o profissional.
+- Servico / Fila: usados para checar “último disponível” e “fila vazia”.
+
+#### Entrada e saída
+
+- Entrada mínima: idServico, idProfissional
+- Saída de sucesso: 200 OK (status=INDISPONIVEL)
+- Erros que interrompem:
+  - 404 serviço inexistente
+  - 404 profissional inexistente
+  - 403 profissional não vinculado
+  - 409 profissional OCUPADO
+  - 409 “último DISPONIVEL com fila não vazia”
+  - 500 falha interna ao atualizar
+
+#### Pontos de decisão (alts)
+
+1 Serviço existe?
+2 Profissional existe?
+3 Profissional pertence ao serviço?
+4 Profissional está OCUPADO?
+5 Profissional é o último DISPONIVEL?
+6 Fila tem clientes?
+7 Atualização de status ok?
+
+#### Decisões de modelagem
+
+- A checagem de “último disponível” pode ser implementada como:
+  - Servico.contarDisponiveis() e comparar com 1, ou
+  - Servico.eUltimoDisponivel(idProfissional).
+
+```mermaid
+
+sequenceDiagram
+    actor Prof as Profissional
+    participant API as "API (ProfissionaisController)"
+    participant SVC as "ProfissionalService"
+    participant SRepo as "ServicoRepo (memoria)"
+    participant PRepo as "ProfissionalRepo (memoria)"
+    participant Serv as "Servico"
+    participant Fila as "Fila (do servico)"
+
+    Prof->>API: PUT /v1/servicos/{idServico}/profissionais/{idProfissional}/encerrar-expediente
+    API->>SVC: encerrarExpediente(idServico, idProfissional)
+
+    SVC->>SRepo: buscarServico(idServico)
+    alt servico nao existe
+        SRepo-->>SVC: null
+        SVC-->>API: erro 404 (servico nao encontrado)
+        API-->>Prof: 404
+    else servico existe
+        SRepo-->>SVC: Servico
+
+        SVC->>PRepo: buscarProfissional(idProfissional)
+        alt profissional nao existe
+            PRepo-->>SVC: null
+            SVC-->>API: erro 404 (profissional nao encontrado)
+            API-->>Prof: 404
+        else profissional existe
+            PRepo-->>SVC: Profissional
+
+            alt profissional nao vinculado ao servico (prof.idService != idServico)
+                SVC-->>API: erro 403 (profissional nao pertence ao servico)
+                API-->>Prof: 403
+            else vinculo ok
+                alt status == OCUPADO
+                    SVC-->>API: erro 409 (encerre atendimento antes de encerrar expediente)
+                    API-->>Prof: 409
+                else status != OCUPADO
+                    %% regra extra: nao pode deixar fila sem atendente disponivel
+                    SVC->>Serv: contarProfissionaisDisponiveis()
+                    alt disponiveis == 1
+                        Serv-->>SVC: 1
+                        SVC->>Fila: temClientes()?
+                        alt fila tem clientes
+                            Fila-->>SVC: true
+                            SVC-->>API: erro 409 (nao pode encerrar: ultimo disponivel e fila com clientes)
+                            API-->>Prof: 409
+                        else fila vazia
+                            Fila-->>SVC: false
+                            SVC->>PRepo: atualizarStatus(idProfissional, INDISPONIVEL)
+                            alt falha ao atualizar
+                                PRepo-->>SVC: erro
+                                SVC-->>API: erro 500
+                                API-->>Prof: 500
+                            else atualizado
+                                PRepo-->>SVC: ProfissionalAtualizado
+                                SVC-->>API: 200 OK (status=INDISPONIVEL)
+                                API-->>Prof: 200 OK + JSON
+                            end
+                        end
+                    else disponiveis > 1 (ou 0)
+                        Serv-->>SVC: N
+                        SVC->>PRepo: atualizarStatus(idProfissional, INDISPONIVEL)
+                        alt falha ao atualizar
+                            PRepo-->>SVC: erro
+                            SVC-->>API: erro 500
+                            API-->>Prof: 500
+                        else atualizado
+                            PRepo-->>SVC: ProfissionalAtualizado
+                            SVC-->>API: 200 OK (status=INDISPONIVEL)
+                            API-->>Prof: 200 OK + JSON
+                        end
+                    end
+                end
+            end
+        end
+    end
 ```
 
 ### Diagrama de sequência - Listar Serviços()
