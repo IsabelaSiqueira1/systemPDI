@@ -21,9 +21,13 @@ direction LR
   U1([Configurar URL<br/>webhook])
   U2([Listar serviços])
   U3([Criar serviços])
+  U8([Cadastrar<br/>profissional])
+  U9([Vincular profissional<br/>a um serviço])
+  U10([Iniciar<br/>expediente])
+  U11([Encerrar<br/>expediente])
   U4([Emitir ficha])
   U5([Chamar o próximo<br/>cliente])
-  U7([Desativar<br/>atendimento])
+  U7([Encerrar<br/>atendimento])
   end
 
   subgraph UC_RIGHT[" "]
@@ -41,10 +45,14 @@ end
 A1 --- U1
 A1 --- U2
 A1 --- U3
+A1 --- U8
 
 A2 --- U2
 A2 --- U4
 
+A3 --- U9
+A3 --- U10
+A3 --- U11
 A3 --- U5
 A3 --- U7
 
@@ -66,7 +74,7 @@ Fluxo Principal:
 2.  O sistema recupera todos os serviços da memória.
 3.  O sistema retorna a lista.
 
-exceções:
+Exceções:
 
 - Não ha serviços disponivel: retornar lista vazia
 - Erro de comunicação/requisição inválida: retorna erro.
@@ -80,7 +88,7 @@ exceções:
 Ator: Administrador
 Objetivo: Cadastrar um novo serviço que poderá ser atendido pelos profissionais.
 
-pré-condição:
+Pré-condição:
 
 - O nome do serviço deve ser informado.
 
@@ -91,7 +99,7 @@ Fluxo Principal:
 3.  O sistema cria o serviço na memória.
 4.  O sistema retorna o serviço criado com seu ID.
 
-exceções:
+Exceções:
 
 - Nome não informado: O sistema rejeita a operação e retorna erro.
 - Nome invalido(vazio, com espaços): o sistema retorna erro "nome invalido".
@@ -100,12 +108,129 @@ exceções:
 
 ---
 
+## Cadastrar Profissional
+
+Ator: Administrador
+Objetivo: Cadastrar um profissional no sistema.
+
+Pré-condição:
+
+- O nome do profissional deve ser informado.
+
+Fluxo Principal:
+
+1. O administrador solicita o cadastro do profissional (nome).
+2. O sistema valida os dados.
+3. O sistema cria o profissional na memória:
+
+- gera id
+- inicia status = INDISPONIVEL
+- inicia sem serviço vinculado (ex.: service_id = null)
+
+4. O sistema retorna o profissional criado.
+
+Exceções:
+
+- Nome não informado / inválido: retorna erro.
+- Profissional duplicado (se você quiser regra por nome): retorna erro.
+- Falha interna ao criar: retorna erro e loga.
+
+---
+
+## Vincular Profissional a um Serviço
+
+Ator: Profissional
+Objetivo: Selecionar o serviço em que irá atuar.
+
+Pré-condições:
+
+- O profissional deve existir.
+- O serviço deve existir.
+- O profissional não pode estar OCUPADO.
+
+Fluxo Principal:
+
+1. O profissional solicita vincular-se a um serviço.
+2. O sistema valida se o profissional existe.
+3. O sistema valida se o serviço existe.
+4. O sistema valida que o profissional não está OCUPADO.
+5. O sistema registra o vínculo (profissional.service_id = serviço.id).
+6. O sistema confirma a operação.
+
+Exceções:
+
+- Serviço inexistente: retorna erro.
+- Profissional inexistente: retorna erro.
+- Profissional OCUPADO: retorna erro (não pode trocar de serviço em atendimento).
+- Falha interna ao alterar vínculo: retorna erro e loga.
+
+---
+
+## Iniciar Expediente
+
+Ator: Profissional
+Objetivo: Informar que está disponível para atender em um serviço.
+
+Pré-condições:
+
+- O serviço deve existir.
+- O profissional deve estar vinculado ao serviço.
+- O profissional não pode estar OCUPADO.
+
+Fluxo Principal:
+
+1.  O profissional solicita iniciar expediente.
+2.  O sistema valida se o serviço existe.
+3.  O sistema valida se o profissional pertence ao serviço.
+4.  O sistema valida se o profissional não está OCUPADO.
+5.  O sistema altera o status do profissional para DISPONIVEL.
+6.  O sistema confirma a operação.
+
+Exceções:
+
+- Serviço inexistente: retorna erro.
+- Profissional não vinculado ao serviço: bloqueia/retorna erro.
+- Profissional está OCUPADO: retorna erro (“encerre o atendimento antes de iniciar expediente”).
+- Erro interno ao alterar o estado: registra log e retorna erro.
+
+---
+
+## Encerrar Expediente
+
+Ator: Profissional
+Objetivo: Informar que não está mais disponível para atender.
+
+Pré-condições:
+
+- O serviço deve existir.
+- O profissional deve estar vinculado ao serviço.
+- O profissional não pode estar OCUPADO.
+
+Fluxo Principal:
+
+1.  O profissional solicita encerrar expediente.
+2.  O sistema valida se o serviço existe.
+3.  O sistema valida se o profissional pertence ao serviço.
+4.  O sistema valida se o profissional não está OCUPADO.
+5.  O sistema altera o status do profissional para INDISPONIVEL.
+6.  O sistema confirma a operação.
+
+Exceções:
+
+- Serviço inexistente: retorna erro.
+- Profissional não vinculado ao serviço: bloqueia/retorna erro.
+- Profissional está OCUPADO: retorna erro (“encerre o atendimento antes de encerrar expediente”).
+- Se for o último DISPONIVEL e ainda houver clientes na fila: retorna erro (“não pode encerrar expediente deixando fila sem atendente”).
+- Erro interno ao alterar o estado: registra log e retorna erro.
+
+---
+
 ## Encerrar Atendimento
 
 Ator: Profissional
-Objetivo: Encerrar o período de atendimento do profissional.
+Objetivo: Encerrar o atendimento em andamento e liberar o profissional
 
-pré-condição:
+Pré-condição:
 
 - O serviço deve existir.
 - O profissional deve estar vinculado a um serviço existente.
@@ -113,7 +238,7 @@ pré-condição:
 
 Fluxo Principal:
 
-1. o Profissional solicita encerrar o atendimento atual.
+1. O profissional solicita encerrar o atendimento atual.
 2. O sistema valida se o serviço existe.
 3. O sistema valida se o profissional pertence ao serviço.
 4. O sistema valida se o profissional está OCUPADO.
@@ -121,7 +246,7 @@ Fluxo Principal:
 6. O sistema altera o status do profissional para DISPONIVEL.
 7. O sistema confirma a operação.
 
-exceções:
+Exceções:
 
 - Serviço inexistente: o sistema retorna erro.
 - Profissional não vinculado ao serviço: o sistema bloqueia a operação.
@@ -139,7 +264,7 @@ Objetivo: Gerar uma ficha de atendimento com prioridade.
 Pré-condições:
 
 - O serviço deve existir.
-- A categoria deve ser válida (imediato, média, baixa).
+- A categoria deve ser válida (Priority, Medium, Low).
 - O nome do cliente deve ser informado.
 
 Fluxo Principal:
@@ -154,7 +279,7 @@ Fluxo Principal:
 5.  O sistema adiciona a ficha na fila correta do serviço.
 6.  O sistema retorna a ficha emitida.
 
-exceções:
+Exceções:
 
 - Nome do cliente não informado: o sistema retorna erro.
 - Categoria inválida: O sistema retorna erro.
@@ -183,23 +308,23 @@ Fluxo Principal:
 3.  O sistema valida se o profissional pertence ao serviço.
 4.  O sistema valida se o profissional está DISPONIVEL.
 5.  O sistema valida que a fila não está vazia.
-6.  O sistema seleciona a próxima ficha respeitando a prioridade.
-7.  O sistema cria um Atendimento (registra inicioEm, associa serviço/profissional/ficha).
-8.  O sistema muda o status do profissional para OCUPADO.
+6.  O sistema seleciona a próxima ficha (Priority → Medium → Low + FIFO).
+7.  O sistema cria um Atendimento (inicioEm e associações).
+8.  O sistema muda status do profissional para OCUPADO.
 9.  O sistema envia o webhook.
 10. O sistema retorna os dados do atendimento.
 
-exceções:
+Exceções:
 
-- Serviço inexistente: o sistema retorna erro.
-- Profissional não pertence ao serviço: o sistema retorna erro/bloqueia.
-- Profissional está INDISPONIVEL: o sistema retorna erro.
-- Profissional está OCUPADO: o sistema retorna erro (“encerre o atendimento atual antes de chamar outro”).
-- Fila vazia: o sistema retorna erro.
-- Falha na geração do registro de atendimento: retorna erro e loga.
-- Webhook falhou: o sistema registra a falha, mas prossegue com a chamada.
-- URL do webhook não configurada: o sistema registra erro e não envia (mas prossegue).
-- Dois profissionais chamam ao mesmo tempo: o sistema deve garantir controle.
+- Serviço inexistente: retorna erro.
+- Profissional não pertence ao serviço: retorna erro/bloqueia.
+- Profissional INDISPONIVEL: retorna erro.
+- Profissional OCUPADO: retorna erro (precisa encerrar antes).
+- Fila vazia: retorna erro.
+- Falha ao criar atendimento: retorna erro e loga.
+- Webhook falhou: loga e prossegue.
+- URL webhook não configurada: loga e prossegue.
+- Concorrência (2 profissionais ao mesmo tempo): garantir controle.
 
 ---
 
@@ -208,15 +333,15 @@ exceções:
 Ator: Sistema interno
 Objetivo: Enviar os dados da chamada para um endpoint configurado.
 
-pre-condição: nenhuma
+Pré-condição: nenhuma
 
 Fluxo Principal:
 
 1.  Quando um cliente é chamado, o sistema prepara o payload do webhook.
 2.  O sistema envia uma requisição HTTP para o endpoint configurado.
-3.  O sistema registra que o webhook foi disparado.
+3.  O sistema registra que tentou disparar o webhook.
 
-exceções:
+Exceções:
 
 - Endpoint fora do ar: O sistema registra o erro no log.
 - Endpoint recusou: o sistema registra erro.
@@ -224,6 +349,8 @@ exceções:
 - Payload invalido: o sistema registra erro.
 - falha na rede: o sistema registra erro.
 - a resposta do endpoint demorou demais: o sistema registra timeout e loga.
+
+---
 
 ## Configurar a URL do Weebhook
 
