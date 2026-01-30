@@ -145,7 +145,6 @@ O encerramento de um atendimento em andamento, registrando `fimEm` e liberando o
 - ProfissionalRepo: busca profissional e status.
 - ServicoRepo/Servico: valida que o serviço existe e que o vínculo do profissional é com aquele serviço.
 - AtendimentoRepo: localiza e atualiza o atendimento em aberto.
-- AtendimentoRepo: localiza e atualiza o atendimento em aberto.
 
 ### Entrada e saída
 
