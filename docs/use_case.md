@@ -22,9 +22,11 @@ direction LR
   U2([Listar serviços])
   U3([Criar serviços])
   U8([Cadastrar<br/>profissional])
+
   U9([Vincular profissional<br/>a um serviço])
   U10([Iniciar<br/>expediente])
   U11([Encerrar<br/>expediente])
+
   U4([Emitir ficha])
   U5([Chamar o próximo<br/>cliente])
   U7([Encerrar<br/>atendimento])
@@ -42,6 +44,7 @@ direction TB
 E([Sistema externo])
 end
 
+%% Associações
 A1 --- U1
 A1 --- U2
 A1 --- U3
@@ -56,6 +59,7 @@ A3 --- U11
 A3 --- U5
 A3 --- U7
 
+%% Includes / relação com externo
 U5 -. "<<include>>" .-> U6
 U6 ---|receber webhook| E
 
@@ -124,7 +128,6 @@ Fluxo Principal:
 3. O sistema cria o profissional na memória:
 
 - gera id
-- inicia status = INDISPONIVEL
 - inicia sem serviço vinculado (ex.: service_id = null)
 
 4. O sistema retorna o profissional criado.
@@ -146,7 +149,8 @@ Pré-condições:
 
 - O profissional deve existir.
 - O serviço deve existir.
-- O profissional não pode estar OCUPADO.
+- O profissional deve estar INDISPONIVEL
+- profissional não pode estar OCUPADO ou DISPONIVEL
 
 Fluxo Principal:
 
@@ -163,6 +167,7 @@ Exceções:
 - Profissional inexistente: retorna erro.
 - Profissional OCUPADO: retorna erro (não pode trocar de serviço em atendimento).
 - Falha interna ao alterar vínculo: retorna erro e loga.
+- Profissional OCUPADO OU DISPONIVEL: retorna erro
 
 ---
 
@@ -205,6 +210,7 @@ Pré-condições:
 - O serviço deve existir.
 - O profissional deve estar vinculado ao serviço.
 - O profissional não pode estar OCUPADO.
+- O profissional deve estar DISPONIVEL. 
 
 Fluxo Principal:
 
@@ -233,7 +239,7 @@ Objetivo: Encerrar o atendimento em andamento e liberar o profissional
 Pré-condição:
 
 - O serviço deve existir.
-- O profissional deve estar vinculado a um serviço existente.
+- O profissional deve estar vinculado ao serviço informado.
 - O profissional deve estar com status OCUPADO.
 
 Fluxo Principal:
@@ -352,7 +358,7 @@ Exceções:
 
 ---
 
-## Configurar a URL do Weebhook
+## Configurar URL do Webhook
 
 Ator: Administrador
 Objetivo: Configurar o endpoint para onde os webhooks serão enviados.

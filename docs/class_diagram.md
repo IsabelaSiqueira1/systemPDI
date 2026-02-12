@@ -10,19 +10,20 @@ class Servico {
   +UUID id
   +String name
   +Fila fila
-  +List~Profissional~ profissionais
+  +profissionaisDisponiveis() int
 }
 
 class Fila {
   +Queue~Ficha~ Priority
   +Queue~Ficha~ Medium
   +Queue~Ficha~ Low
-  +adicionaFicha(f: Ficha) void
+  +adicionarFicha(f: Ficha) void
   +chamarProximo() Ficha
 }
 
 class Ficha {
   +UUID id
+  +String code
   +String clientName
   +CategoriaAtendimento category
   +DateTime emitidaEm
@@ -45,15 +46,15 @@ class Atendimento {
   +UUID idFicha
   +UUID idServico
   +DateTime inicioEm
-  +DateTime fimEm
+  +DateTime fimEm?
 }
 
 class Webhook {
-  +enviar(payload) void
+  +enviar(payload) ResultadoWebhook
 }
 
 class WebhookConfig {
-  +String url
+  +String url?
 }
 
 %% Enums
@@ -71,12 +72,19 @@ class StatusProfissional {
   INDISPONIVEL
 }
 
+class ResultadoWebhook {
+  <<enum>>
+  SUCESSO
+  ERRO
+  NAO_CONFIGURADO
+}
+
 %% Relacionamentos
 Servico "1" *-- "1" Fila : possui
 Fila "1" *-- "0..*" Ficha : enfileira
 
-Servico "1" o-- "0..*" Ficha : possui
-Servico "0..1" o-- "0..*" Profissional : vincula
+Servico "1" o-- "0..*" Ficha : historico
+Servico "1" o-- "0..*" Profissional : vincula
 Servico "1" o-- "0..*" Atendimento : registra
 
 Profissional "1" o-- "0..*" Atendimento : realiza
@@ -107,6 +115,10 @@ Atributos
 - profissionais: List<Profissional>
 - Fila fila
 
+Metodos
+
+- ProfissionaisDisponiveis(): int
+
 Regras de Negócio associadas
 
 - Um serviço possui exatamente 1 fila prioritária.
@@ -126,14 +138,15 @@ Atributos
 
 Metodos
 
-- adicionaFicha(f: Ficha) - Adiciona a ficha na fila correspondente à categoria.
+- adicionarFicha(f: Ficha) - Adiciona a ficha na fila correspondente à categoria.
 - chamarProximo(): Ficha - Retorna e remove a próxima ficha respeitando:
   - se Priority não vazia → retorna dela
   - senão se Medium não vazia → retorna dela
   - senão se Low não vazia → retorna dela
   - se todas vazias → “sem ficha” (erro / nil / vazio)
+- temClientes(): bool  
 
-## 2. Ficha
+## 3. Ficha
 
 Representa a solicitação de atendimento feita por um cliente.
 
@@ -145,13 +158,16 @@ Atributos
 - emitidaEm: DateTime (Momento de emissão)
 - idService: UUID (Serviço ao qual a ficha pertence)
 
+metodo
+- chamadaEm: DateTime
+
 Regras
 
 - Cada ficha sempre pertence a um único serviço.
 - Uma ficha pode gerar no máximo um atendimento.
 - Ao ser chamada, a ficha é removida da fila.
 
-## 3. Profissional
+## 4. Profissional
 
 Representa o atendente que chama fichas e realiza os atendimentos.
 
@@ -164,20 +180,21 @@ Atributos
 
 Metodos
 
-- MarcarOcupado() - Marca profissional como OCUPADO
-- MarcarDisponivel() - marcar profissional como DISPONIVEL
-- MarcarIndisponivel() - Marca profissional como INDISPONIVEL
+- MarcarOcupado() - Marcar profissional como OCUPADO
+- MarcarDisponivel() - Marcar profissional como DISPONIVEL
+- MarcarIndisponivel() - Marcar profissional como INDISPONIVEL
 
 Regras
 
 - Um profissional pode existir sem serviço vinculado (idService = null).
 - Status inicial recomendado ao cadastrar: INDISPONIVEL.
-- Só pode chamar próximo cliente se estiver DISPONIVEL.
+- Só pode chamar próximo cliente se estiver DISPONIVEL e vinculado a um serviço.
 - Se estiver OCUPADO, deve encerrar o atendimento antes de chamar outro.
 - Se estiver INDISPONIVEL, não pode chamar próximo nem encerrar atendimento.
 - Só atua no serviço ao qual está vinculado.
+- Só pode alterar idService (vincular/trocar serviço) se estiver INDISPONIVEL.
 
-## 4. Atendimento
+## 5. Atendimento
 
 Representa o registro oficial de um atendimento realizado.
 
@@ -192,10 +209,10 @@ Atributos
 
 Regras
 
-- Um atendimento está sempre relacionado a exatamente 1 ficha, 1 profissional e 1 serviço.
+- UUm profissional pode ter no máximo 1 atendimento em aberto por vez.
 - Uma ficha deve gerar, no máximo, 1 atendimento.
 
-## Webhook
+## 6. Webhook
 
 atributos
 
@@ -207,7 +224,7 @@ metodos
   - tenta enviar HTTP para a URL configurada
   - se falhar, registra log e não bloqueia a criação do atendimento
 
-## WebhookConfig
+## 7. WebhookConfig
 
 Atributos
 
@@ -243,7 +260,7 @@ Servico 1 —— 0..\* Ficha
 
 Um serviço pode ter muitos profissionais vinculados
 Um profissional pode estar vinculado a 0 ou 1 serviço (até vincular)
-Servico 0..1 —— 0..\* Profissional
+Servico 1 —— 0..*\* Profissional
 
 ### Profissional — Atendimento
 

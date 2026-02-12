@@ -48,11 +48,10 @@ sequenceDiagram
     actor Prof as Profissional
     participant API as "API (AtendimentosController)"
     participant SVC as "AtendimentoService"
-    participant SRepo as "ServicoRepo (memoria)"
-    participant PRepo as "ProfissionalRepo (memoria)"
-    participant Serv as "Servico"
-    participant Fila as "Fila (do servico)"
-    participant ARepo as "AtendimentoRepo (memoria)"
+    participant SRepo as "ServicoRepo"
+    participant PRepo as "ProfissionalRepo"
+    participant Fila as "Fila"
+    participant ARepo as "AtendimentoRepo"
     participant WH as "Webhook"
     participant WHC as "WebhookConfig"
     participant Ext as "Sistema Externo"
@@ -65,7 +64,6 @@ sequenceDiagram
         SRepo-->>SVC: null
         SVC-->>API: erro 404 (servico nao encontrado)
         API-->>Prof: 404
-    else servico existe
         SRepo-->>SVC: Servico
 
         SVC->>PRepo: buscarProfissional(idProfissional)
@@ -73,37 +71,31 @@ sequenceDiagram
             PRepo-->>SVC: null
             SVC-->>API: erro 404 (profissional nao encontrado)
             API-->>Prof: 404
-        else profissional existe
             PRepo-->>SVC: Profissional
 
-            SVC->>PRepo: validarVinculo(idProfissional, idServico)
-            alt profissional nao vinculado ao servico
-                SVC-->>API: erro 403 (nao permitido)
+            alt profissional.idService != idServico
+                SVC-->>API: erro 403 (profissional nao pertence ao servico)
                 API-->>Prof: 403
-            else vinculo ok
-
-                SVC->>PRepo: statusDoProfissional(idProfissional)
-                alt status != DISPONIVEL (OCUPADO ou INDISPONIVEL)
-                    SVC-->>API: erro 409 (profissional indisponivel)
+                alt profissional.status != DISPONIVEL
+                    SVC-->>API: erro 409 (profissional nao disponivel)
                     API-->>Prof: 409
-                else status == DISPONIVEL
 
-                    SVC->>Serv: obterFila()
-                    Serv-->>SVC: Fila
+                    critical controle de concorrencia (fila + status)
+                        SVC->>Fila: chamarProximo() (Priority -> Medium -> Low)
+                        alt fila vazia
+                            Fila-->>SVC: sem ficha
+                            SVC-->>API: erro 409 (fila vazia)
+                            API-->>Prof: 409
+                            Fila-->>SVC: ficha
 
-                    SVC->>Fila: chamarProximo() (Priority -> Medium -> Low)
-                    alt fila vazia
-                        Fila-->>SVC: sem ficha
-                        SVC-->>API: erro 409 (fila vazia)
-                        API-->>Prof: 409
-                    else tem ficha
-                        Fila-->>SVC: ficha
+                            SVC->>ARepo: criarAtendimento(idServico,idProf,idFicha,inicioEm=agora)
+                            ARepo-->>SVC: atendimento
 
-                        SVC->>ARepo: criarAtendimento(idServico,idProf,idFicha,inicioEm=agora)
-                        ARepo-->>SVC: atendimento
+                            SVC->>PRepo: marcarProfissionalOcupado(idProfissional, OCUPADO)
+                        end
+                    end
 
-                        SVC->>PRepo: atualizarStatus(idProfissional, OCUPADO)
-
+                    opt somente se atendimento foi criado
                         SVC->>WH: enviar(payload)
                         WH->>WHC: getURL()
 
@@ -121,10 +113,10 @@ sequenceDiagram
                                 WH-->>SVC: ok
                             end
                         end
-
-                        SVC-->>API: atendimentoDTO
-                        API-->>Prof: 200 OK + JSON
                     end
+
+                    SVC-->>API: atendimentoDTO
+                    API-->>Prof: 200 OK + JSON
                 end
             end
         end
@@ -424,22 +416,27 @@ sequenceDiagram
     else profissional existe
         PRepo-->>SVC: Profissional
 
-        alt profissional ja possui servico vinculado (idService != null)
-            SVC-->>API: erro 409 (profissional ja vinculado a um servico)
+        alt status == OCUPADO
+            SVC-->>API: erro 409 (profissional em atendimento)
             API-->>Prof: 409
-        else sem servico vinculado
-            SVC->>SRepo: buscarServico(idServico)
-            alt servico nao existe
-                SRepo-->>SVC: null
-                SVC-->>API: erro 404 (servico nao encontrado)
-                API-->>Prof: 404
-            else servico existe
-                SRepo-->>SVC: Servico
+        else status == DISPONIVEL
+            SVC-->>API: erro 409 (encerre expediente antes de vincular/trocar servico)
+            API-->>Prof: 409
+        else status == INDISPONIVEL
 
-                alt status == OCUPADO
-                    SVC-->>API: erro 409 (profissional em atendimento)
-                    API-->>Prof: 409
-                else status != OCUPADO
+            alt profissional ja possui servico vinculado (idService != null)
+                SVC-->>API: erro 409 (profissional ja vinculado&#59; encerre expediente para trocar)
+                API-->>Prof: 409
+            else sem servico vinculado (idService == null)
+
+                SVC->>SRepo: buscarServico(idServico)
+                alt servico nao existe
+                    SRepo-->>SVC: null
+                    SVC-->>API: erro 404 (servico nao encontrado)
+                    API-->>Prof: 404
+                else servico existe
+                    SRepo-->>SVC: Servico
+
                     SVC->>PRepo: atualizarServicoDoProfissional(idProfissional, idServico)
                     alt falha ao atualizar
                         PRepo-->>SVC: erro
@@ -525,13 +522,16 @@ sequenceDiagram
             PRepo-->>SVC: Profissional
 
             alt profissional nao vinculado ao servico (prof.idService != idServico)
-                SVC-->>API: erro 403 (profissional nao pertence ao servico)
+                SVC-->>API: erro 403 (profissional nao vinculado ao servico)
                 API-->>Prof: 403
             else vinculo ok
                 alt status == OCUPADO
                     SVC-->>API: erro 409 (encerre atendimento antes de iniciar expediente)
                     API-->>Prof: 409
-                else status != OCUPADO
+                else status == DISPONIVEL
+                    SVC-->>API: erro 409 (profissional ja esta em expediente)
+                    API-->>Prof: 409
+                else status == INDISPONIVEL
                     SVC->>PRepo: atualizarStatus(idProfissional, DISPONIVEL)
                     alt falha ao atualizar status
                         PRepo-->>SVC: erro
