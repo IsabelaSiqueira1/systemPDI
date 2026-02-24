@@ -119,22 +119,24 @@ Objetivo: Cadastrar um profissional no sistema.
 
 Pré-condição:
 
-- O nome do profissional deve ser informado.
+- O Nome, email e senha devem ser informados.
 
 Fluxo Principal:
 
-1. O administrador solicita o cadastro do profissional (nome).
-2. O sistema valida os dados.
-3. O sistema cria o profissional na memória:
+1. O administrador solicita o cadastro do profissional (nome, email, senha).
+2. sistema valida unicidade do email
+3. sistema gera password_hash
+4. O sistema cria o profissional na memória:
 
 - gera id
 - inicia sem serviço vinculado (ex.: service_id = null)
 
-4. O sistema retorna o profissional criado.
+5. O sistema retorna o profissional criado.
 
 Exceções:
 
 - Nome não informado / inválido: retorna erro.
+- Email já cadastrado: retorna erro.
 - Profissional duplicado (se você quiser regra por nome): retorna erro.
 - Falha interna ao criar: retorna erro e loga.
 
@@ -157,7 +159,7 @@ Fluxo Principal:
 1. O profissional solicita vincular-se a um serviço.
 2. O sistema valida se o profissional existe.
 3. O sistema valida se o serviço existe.
-4. O sistema valida que o profissional não está OCUPADO.
+4. O sistema valida que o profissional está INDISPONIVEL.
 5. O sistema registra o vínculo (profissional.service_id = serviço.id).
 6. O sistema confirma a operação.
 
@@ -189,11 +191,13 @@ Fluxo Principal:
 3.  O sistema valida se o profissional pertence ao serviço.
 4.  O sistema valida se o profissional não está OCUPADO.
 5.  O sistema altera o status do profissional para DISPONIVEL.
+6.  O sistema cria registro de atuação profissional (professional_id, service_id, started_at)
 6.  O sistema confirma a operação.
 
 Exceções:
 
 - Serviço inexistente: retorna erro.
+- Já existe expediente ativo para o profissional.
 - Profissional não vinculado ao serviço: bloqueia/retorna erro.
 - Profissional está OCUPADO: retorna erro (“encerre o atendimento antes de iniciar expediente”).
 - Erro interno ao alterar o estado: registra log e retorna erro.
@@ -219,6 +223,8 @@ Fluxo Principal:
 3.  O sistema valida se o profissional pertence ao serviço.
 4.  O sistema valida se o profissional não está OCUPADO.
 5.  O sistema altera o status do profissional para INDISPONIVEL.
+6.  O sistema finaliza o registro de atuação aberto (ended_at)
+7.  O sistema remove vínculo com serviço (service_id = null)
 6.  O sistema confirma a operação.
 
 Exceções:
@@ -226,7 +232,7 @@ Exceções:
 - Serviço inexistente: retorna erro.
 - Profissional não vinculado ao serviço: bloqueia/retorna erro.
 - Profissional está OCUPADO: retorna erro (“encerre o atendimento antes de encerrar expediente”).
-- Se for o último DISPONIVEL e ainda houver clientes na fila: retorna erro (“não pode encerrar expediente deixando fila sem atendente”).
+- Se existir ficha na fila → bloquear.
 - Erro interno ao alterar o estado: registra log e retorna erro.
 
 ---

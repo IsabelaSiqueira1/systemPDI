@@ -30,8 +30,13 @@ Criar o back-end de uma aplicação para gerenciamento de filas de atendimento (
 
 #### Profissionais
 
-- O sistema deve disponibilizar endpoint para cadastrar profissional.
+- O sistema deve disponibilizar endpoint para cadastrar profissional
+informando nome, email e senha.
+- O email deve ser único no sistema e utilizado como identificador do profissional.
 - O sistema deve permitir que um profissional inicie expediente selecionando um serviço existente (ativando vínculo/serviço atual).
+- O sistema deve registrar o histórico de atuação do profissional,
+armazenando quando iniciou e quando encerrou o expediente em determinado serviço,
+independentemente da existência de atendimentos realizados.
 - O sistema deve permitir que um profissional encerre expediente (ficando INDISPONIVEL).
 - O sistema deve permitir que um profissional se vincule a um serviço existente (selecionar serviço ao iniciar expediente).
 - O sistema deve permitir que o profissional altere seu status entre:
@@ -40,6 +45,7 @@ Criar o back-end de uma aplicação para gerenciamento de filas de atendimento (
   - OCUPADO (durante um atendimento)
 - O sistema deve colocar o profissional em OCUPADO ao chamar o próximo cliente e voltar para DISPONIVEL ao encerrar atendimento.
 -O sistema deve impedir que um profissional altere de serviço (ou inicie expediente em outro serviço) enquanto estiver OCUPADO.
+- O sistema deve impedir cadastro de profissionais com email já existente.
 
 #### Fichas e Fila
 
@@ -94,7 +100,7 @@ Criar o back-end de uma aplicação para gerenciamento de filas de atendimento (
 - Ao encerrar atendimento:
   - o sistema registra fimEm,
   - e altera o status do profissional para DISPONIVEL.
-- Um profissional não pode encerrar expediente se for o último DISPONIVEL no serviço e ainda existirem clientes na fila.
+- Um profissional não pode encerrar expediente enquanto existirem clientes aguardando atendimento na fila do serviço.
 
 #### Sobre fila e fichas
 

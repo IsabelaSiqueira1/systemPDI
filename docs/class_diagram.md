@@ -6,11 +6,14 @@ draw.io: https://app.diagrams.net/#G1UR5ViAbHcCuxr4jYljAVzmnJzwghlo9q#%7B%22page
 
 classDiagram
 
+%% =========================
+%% CLASSES PRINCIPAIS
+%% =========================
+
 class Servico {
   +UUID id
   +String name
   +Fila fila
-  +profissionaisDisponiveis() int
 }
 
 class Fila {
@@ -19,11 +22,11 @@ class Fila {
   +Queue~Ficha~ Low
   +adicionarFicha(f: Ficha) void
   +chamarProximo() Ficha
+  +temClientes() bool
 }
 
 class Ficha {
   +UUID id
-  +String code
   +String clientName
   +CategoriaAtendimento category
   +DateTime emitidaEm
@@ -33,8 +36,11 @@ class Ficha {
 class Profissional {
   +UUID id
   +String name
+  +String email
+  +String passwordHash
   +UUID idService
   +StatusProfissional status
+
   +MarcarOcupado() void
   +MarcarDisponivel() void
   +MarcarIndisponivel() void
@@ -49,15 +55,34 @@ class Atendimento {
   +DateTime fimEm?
 }
 
+%% =========================
+%% NOVA CLASSE - HISTORICO
+%% =========================
+
+class AtuacaoProfissional {
+  +UUID id
+  +UUID idProfissional
+  +UUID idServico
+  +DateTime inicioExpediente
+  +DateTime fimExpediente?
+}
+
+%% =========================
+%% WEBHOOK
+%% =========================
+
 class Webhook {
   +enviar(payload) ResultadoWebhook
 }
 
 class WebhookConfig {
-  +String url?
+  +String url
 }
 
-%% Enums
+%% =========================
+%% ENUMS
+%% =========================
+
 class CategoriaAtendimento {
   <<enum>>
   Priority
@@ -79,7 +104,10 @@ class ResultadoWebhook {
   NAO_CONFIGURADO
 }
 
-%% Relacionamentos
+%% =========================
+%% RELACIONAMENTOS
+%% =========================
+
 Servico "1" *-- "1" Fila : possui
 Fila "1" *-- "0..*" Ficha : enfileira
 
@@ -89,6 +117,9 @@ Servico "1" o-- "0..*" Atendimento : registra
 
 Profissional "1" o-- "0..*" Atendimento : realiza
 Ficha "1" o-- "0..1" Atendimento : gera
+
+Profissional "1" o-- "0..*" AtuacaoProfissional : atua
+Servico "1" o-- "0..*" AtuacaoProfissional : registra
 
 Webhook ..> WebhookConfig : usa
 
@@ -106,7 +137,7 @@ Webhook ..> WebhookConfig : usa
 
 ## 1. Serviço
 
-Gerencia sua fila de fichas, profissionais vinculados e a operação de chamar o próximo cliente.
+Gerencia sua fila de fichas, profissionais vinculados, historico de operações e historico de atuação profissionais.
 
 Atributos
 
@@ -175,6 +206,8 @@ Atributos
 
 - id: UUID
 - name: String
+- email: string(unico)
+- password: string
 - idService: UUID (Serviço ao qual está vinculado)
 - status: StatusProfissional (DISPONIVEL | OCUPADO | INDISPONIVEL)
 

@@ -310,20 +310,23 @@ O cadastro de um profissional no sistema, com validação do nome e persistênci
 
 #### Entrada e saída
 
-- Entrada mínima: nome
+- Entrada mínima: nome, email, password
 - Saída de sucesso: profissional criado (201)
-- Erros que interrompem: nome inválido, duplicidade, falha interna ao salvar
+- Erros que interrompem: nome inválido, email inválido, email já cadastrado, falha interna ao salvar
 
 #### Pontos de decisão (alts)
 
 1. Nome é válido?
-2. Profissional duplicado?
+2. Email é válido?
+3. Email já cadastrado?
 
 #### Decisões de modelagem
 
 - Profissional é criado com:
-- status = INDISPONIVEL
-- idService = null
+    - status = INDISPONIVEL
+    - idService = null
+- Email é o identificador único do profissional.
+- A senha recebida é transformada internamente em passwordHash. 
 
 ```mermaid
 
@@ -333,34 +336,41 @@ sequenceDiagram
     participant SVC as "ProfissionalService"
     participant Repo as "ProfissionalRepo (memoria)"
 
-    Admin->>API: POST /v1/profissionais {nome}
-    API->>SVC: cadastrarProfissional(nome)
+    Admin->>API: POST /profissionais {name, email, password}
+    API->>SVC: cadastrarProfissional(name, email, password)
 
     alt nome vazio ou so espacos
         SVC-->>API: erro 400 (nome invalido)
         API-->>Admin: 400
     else nome ok
-        opt regra de duplicidade por nome (opcional)
-            SVC->>Repo: existePorNome(nome)?
-            alt ja existe
-                Repo-->>SVC: true
-                SVC-->>API: erro 409 (profissional ja existe)
-                API-->>Admin: 409
-            else nao existe
-                Repo-->>SVC: false
-            end
-        end
 
-        SVC->>SVC: criarProfissional(id, nome, status=INDISPONIVEL, idService=null)
-        SVC->>Repo: salvar(profissional)
-        alt falha ao salvar
-            Repo-->>SVC: erro
-            SVC-->>API: erro 500 (falha interna)
-            API-->>Admin: 500
-        else salvo com sucesso
-            Repo-->>SVC: profissionalCriado
-            SVC-->>API: profissionalDTO
-            API-->>Admin: 201 Created + JSON
+        alt email invalido
+            SVC-->>API: erro 400 (email invalido)
+            API-->>Admin: 400
+        else email valido
+
+            SVC->>Repo: existePorEmail(email)?
+            alt email ja cadastrado
+                Repo-->>SVC: true
+                SVC-->>API: erro 409 (email ja cadastrado)
+                API-->>Admin: 409
+            else email livre
+                Repo-->>SVC: false
+
+                SVC->>SVC: gerarPasswordHash(password)
+                SVC->>SVC: criarProfissional(id, name, email, passwordHash, status=INDISPONIVEL, idService=null)
+
+                SVC->>Repo: salvar(profissional)
+                alt falha ao salvar
+                    Repo-->>SVC: erro
+                    SVC-->>API: erro 500 (falha interna)
+                    API-->>Admin: 500
+                else salvo com sucesso
+                    Repo-->>SVC: profissionalCriado
+                    SVC-->>API: profissionalDTO
+                    API-->>Admin: 201 Created + JSON
+                end
+            end
         end
     end
 ```
@@ -605,7 +615,6 @@ sequenceDiagram
     participant SRepo as "ServicoRepo (memoria)"
     participant PRepo as "ProfissionalRepo (memoria)"
     participant Serv as "Servico"
-    participant Fila as "Fila (do servico)"
 
     Prof->>API: PUT /v1/servicos/{idServico}/profissionais/{idProfissional}/encerrar-expediente
     API->>SVC: encerrarExpediente(idServico, idProfissional)
@@ -634,39 +643,31 @@ sequenceDiagram
                     SVC-->>API: erro 409 (encerre atendimento antes de encerrar expediente)
                     API-->>Prof: 409
                 else status != OCUPADO
-                    %% regra extra: nao pode deixar fila sem atendente disponivel
-                    SVC->>Serv: contarProfissionaisDisponiveis()
-                    alt disponiveis == 1
-                        Serv-->>SVC: 1
-                        SVC->>Fila: temClientes()?
-                        alt fila tem clientes
-                            Fila-->>SVC: true
-                            SVC-->>API: erro 409 (nao pode encerrar: ultimo disponivel e fila com clientes)
-                            API-->>Prof: 409
-                        else fila vazia
-                            Fila-->>SVC: false
-                            SVC->>PRepo: atualizarStatus(idProfissional, INDISPONIVEL)
-                            alt falha ao atualizar
-                                PRepo-->>SVC: erro
-                                SVC-->>API: erro 500
-                                API-->>Prof: 500
-                            else atualizado
-                                PRepo-->>SVC: ProfissionalAtualizado
-                                SVC-->>API: 200 OK (status=INDISPONIVEL)
-                                API-->>Prof: 200 OK + JSON
-                            end
-                        end
-                    else disponiveis > 1 (ou 0)
-                        Serv-->>SVC: N
+                    SVC->>Serv: filaEstaVazia()?
+                    alt fila NAO vazia
+                        Serv-->>SVC: false
+                        SVC-->>API: erro 409 (nao pode encerrar: fila ainda possui fichas)
+                        API-->>Prof: 409
+                    else fila vazia
+                        Serv-->>SVC: true
+
                         SVC->>PRepo: atualizarStatus(idProfissional, INDISPONIVEL)
-                        alt falha ao atualizar
+                        alt falha ao atualizar status
                             PRepo-->>SVC: erro
                             SVC-->>API: erro 500
                             API-->>Prof: 500
-                        else atualizado
-                            PRepo-->>SVC: ProfissionalAtualizado
-                            SVC-->>API: 200 OK (status=INDISPONIVEL)
-                            API-->>Prof: 200 OK + JSON
+                        else status atualizado
+                            PRepo-->>SVC: ok
+                            SVC->>PRepo: atualizarServicoDoProfissional(idProfissional, null)
+                            alt falha ao desvincular servico
+                                PRepo-->>SVC: erro
+                                SVC-->>API: erro 500
+                                API-->>Prof: 500
+                            else desvinculado
+                                PRepo-->>SVC: ProfissionalAtualizado
+                                SVC-->>API: 200 OK (status=INDISPONIVEL, idService=null)
+                                API-->>Prof: 200 OK + JSON
+                            end
                         end
                     end
                 end
