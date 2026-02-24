@@ -13,38 +13,52 @@ FK (Foreign Key): campo que aponta para outra tabela
 
 #### services
 
-- id (PK)
-- name (unique)
+- id (PK, UUID)
+- name (UNIQUE, NOT NULL)
 
 #### profissionais
+Representa o profissional cadastrado e seu estado atual no sistema.
 
-- id (PK)
-- name
-- service_id (FK → services.id)
-- status (DISPONIVEL | OCUPADO | INDISPONIVEL)
+- id (PK, UUID)
+- name (NOT NULL)
+- email (UNIQUE, NOT NULL)
+- password_hash (NOT NULL)
+- service_id (FK → services.id, NULLABLE)
+- status (NOT NULL — DISPONIVEL | OCUPADO | INDISPONIVEL)
 
-#### fichas
+#### professional_activity (histórico de expediente / atuação)
+Registra quando o profissional iniciou e encerrou expediente em um serviço (histórico).
 
-- id (PK)
-- service_id (FK → services.id)
-- client_name
-- category (Priority | Medium | Low)
-- emitido_em
+- id (PK, UUID)
+- professional_id (FK → professionals.id, NOT NULL)
+- service_id (FK → services.id, NOT NULL)
+- started_at (NOT NULL)
+- ended_at (NULLABLE)
+
+
+#### ticket
+Fila (em memória) vira persistência de fichas emitidas + histórico.
+
+- id (PK, UUID)
+- service_id (FK → services.id, NOT NULL)
+- client_name (NOT NULL)
+- category (NOT NULL — Priority | Medium | Low)
+- issued_at (NOT NULL)
 
 #### atendimentos
 
-- id (PK)
-- service_id (FK → services.id)
-- professional_id (FK → profissionais.id)
-- ficha_id (FK → fichas.id)
-- começou_em
-- terminou_em
+- id (PK, UUID)
+- service_id (FK → services.id, NOT NULL)
+- professional_id (FK → professionals.id, NOT NULL)
+- ticket_id (FK → tickets.id, NOT NULL, UNIQUE)
+- started_at (NOT NULL)
+- ended_at (NULLABLE)
 
 #### webhook_config
 
-- id (PK)
-- url
-- updated_at
+- id (PK, int)
+- url (NULLABLE)
+- updated_at (NOT NULL)
 
 Relacionamentos
 services 1 — N profissionais
@@ -52,3 +66,63 @@ services 1 — N tickets
 services 1 — N atendimentos
 profissionais 1 — N atendimentos
 fichas 1 — 0..1 atendimentos
+
+```mermaid
+
+erDiagram
+
+  SERVICES {
+    UUID id PK
+    string name "UNIQUE, NOT NULL"
+  }
+
+  PROFESSIONALS {
+    UUID id PK
+    string name "NOT NULL"
+    string email "UNIQUE, NOT NULL"
+    string password_hash "NOT NULL"
+    string status "NOT NULL: DISPONIVEL|OCUPADO|INDISPONIVEL"
+    UUID current_service_id FK "NULLABLE"
+  }
+
+  PROFESSIONAL_SHIFTS {
+    UUID id PK
+    UUID professional_id FK "NOT NULL"
+    UUID service_id FK "NOT NULL"
+    datetime started_at "NOT NULL"
+    datetime ended_at "NULLABLE"
+  }
+
+  TICKETS {
+    UUID id PK
+    UUID service_id FK "NOT NULL"
+    string client_name "NOT NULL"
+    string category "NOT NULL: Priority|Medium|Low"
+    datetime issued_at "NOT NULL"
+  }
+
+  ATTENDANCES {
+    UUID id PK
+    UUID service_id FK "NOT NULL"
+    UUID professional_id FK "NOT NULL"
+    UUID ticket_id FK "NOT NULL, UNIQUE"
+    datetime started_at "NOT NULL"
+    datetime ended_at "NULLABLE"
+  }
+
+  WEBHOOK_CONFIG {
+    int id PK
+    string url "NULLABLE"
+    datetime updated_at "NOT NULL"
+  }
+
+  SERVICES ||--o{ PROFESSIONALS : current_service_id
+
+  PROFESSIONALS ||--o{ PROFESSIONAL_SHIFTS : logs
+  SERVICES      ||--o{ PROFESSIONAL_SHIFTS : logs
+
+  SERVICES      ||--o{ TICKETS : service_id
+  SERVICES      ||--o{ ATTENDANCES : service_id
+  PROFESSIONALS ||--o{ ATTENDANCES : professional_id
+  TICKETS       ||--o| ATTENDANCES : ticket_id
+```

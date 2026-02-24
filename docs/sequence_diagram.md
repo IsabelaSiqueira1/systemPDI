@@ -358,11 +358,11 @@ sequenceDiagram
                 Repo-->>SVC: false
 
                 SVC->>SVC: gerarPasswordHash(password)
-                SVC->>SVC: criarProfissional(id, name, email, passwordHash, status=INDISPONIVEL, idService=null)
+                SVC->>SVC: criarProfissional(id, name, email, password, status=INDISPONIVEL, idService=null)
 
                 SVC->>Repo: salvar(profissional)
                 alt falha ao salvar
-                    Repo-->>SVC: erro
+                    Repo-->>SVC: erropassword: string
                     SVC-->>API: erro 500 (falha interna)
                     API-->>Admin: 500
                 else salvo com sucesso
@@ -567,7 +567,8 @@ O fluxo para um profissional encerrar o expediente, mudando seu status para INDI
 - serviço existe
 - profissional existe e está vinculado ao serviço
 - profissional não pode estar OCUPADO
-- regra extra: se ele for o último DISPONIVEL do serviço e ainda existir cliente na fila, bloqueia o encerramento.
+- Fila está vazia?
+- Regra: não pode encerrar expediente se a fila do serviço não estiver vazia
 
 #### Participantes e papel
 

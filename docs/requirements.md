@@ -32,6 +32,8 @@ Criar o back-end de uma aplicação para gerenciamento de filas de atendimento (
 
 - O sistema deve disponibilizar endpoint para cadastrar profissional
 informando nome, email e senha.
+- A senha deve ser definida pelo profissional no cadastro (o sistema não gera senha).
+- O sistema deve armazenar apenas o hash da senha (passwordHash), nunca a senha em texto puro.
 - O email deve ser único no sistema e utilizado como identificador do profissional.
 - O sistema deve permitir que um profissional inicie expediente selecionando um serviço existente (ativando vínculo/serviço atual).
 - O sistema deve registrar o histórico de atuação do profissional,
@@ -70,6 +72,7 @@ independentemente da existência de atendimentos realizados.
 ## Não Funcionais -- como o sistema deve ser
 
 - O sistema deve ser desenvolvido utilizando Go.
+- O sistema deve proteger credenciais: senha nunca deve ser persistida/retornada em texto puro, apenas hash.gerarPasswordHash
 - O sistema deve persistir dados na memoria volatil (não usar banco de dados).
 - O sistema deve utilizar estruturas adequadas de filas e listas em memória.
 - Toda comunicação deve acontecer via API REST.

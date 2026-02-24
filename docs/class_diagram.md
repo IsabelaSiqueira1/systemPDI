@@ -207,7 +207,7 @@ Atributos
 - id: UUID
 - name: String
 - email: string(unico)
-- password: string
+- passwordHash: string
 - idService: UUID (Serviço ao qual está vinculado)
 - status: StatusProfissional (DISPONIVEL | OCUPADO | INDISPONIVEL)
 
