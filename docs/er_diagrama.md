@@ -1,6 +1,65 @@
 ## Diagrama Entidade-Relacionamento (ER)
 
 Se eu fosse salvar isso num banco de dados, quais seriam as tabelas, quais colunas elas teriam e como elas se relacionam?
+```mermaid
+
+erDiagram
+
+  SERVICES {
+    UUID id PK
+    string name "UNIQUE, NOT NULL"
+  }
+
+  PROFESSIONALS {
+    UUID id PK
+    string name "NOT NULL"
+    string email "UNIQUE, NOT NULL"
+    string password_hash "NOT NULL"
+    string status "NOT NULL: DISPONIVEL|OCUPADO|INDISPONIVEL"
+    UUID current_service_id FK "NULLABLE"
+  }
+
+  PROFESSIONAL_SHIFTS {
+    UUID id PK
+    UUID professional_id FK "NOT NULL"
+    UUID service_id FK "NOT NULL"
+    datetime started_at "NOT NULL"
+    datetime ended_at "NULLABLE"
+  }
+
+  TICKETS {
+    UUID id PK
+    UUID service_id FK "NOT NULL"
+    string client_name "NOT NULL"
+    string category "NOT NULL: Priority|Medium|Low"
+    datetime issued_at "NOT NULL"
+  }
+
+  ATTENDANCES {
+    UUID id PK
+    UUID service_id FK "NOT NULL"
+    UUID professional_id FK "NOT NULL"
+    UUID ticket_id FK "NOT NULL, UNIQUE"
+    datetime started_at "NOT NULL"
+    datetime ended_at "NULLABLE"
+  }
+
+  WEBHOOK_CONFIG {
+    int id PK
+    string url "NULLABLE"
+    datetime updated_at "NOT NULL"
+  }
+
+  SERVICES ||--o{ PROFESSIONALS : current_service_id
+
+  PROFESSIONALS ||--o{ PROFESSIONAL_SHIFTS : logs
+  SERVICES      ||--o{ PROFESSIONAL_SHIFTS : logs
+
+  SERVICES      ||--o{ TICKETS : service_id
+  SERVICES      ||--o{ ATTENDANCES : service_id
+  PROFESSIONALS ||--o{ ATTENDANCES : professional_id
+  TICKETS       ||--o| ATTENDANCES : ticket_id
+```
 
 entidade vira tabela
 atibutos vira colunas
@@ -66,63 +125,3 @@ services 1 — N tickets
 services 1 — N atendimentos
 profissionais 1 — N atendimentos
 fichas 1 — 0..1 atendimentos
-
-```mermaid
-
-erDiagram
-
-  SERVICES {
-    UUID id PK
-    string name "UNIQUE, NOT NULL"
-  }
-
-  PROFESSIONALS {
-    UUID id PK
-    string name "NOT NULL"
-    string email "UNIQUE, NOT NULL"
-    string password_hash "NOT NULL"
-    string status "NOT NULL: DISPONIVEL|OCUPADO|INDISPONIVEL"
-    UUID current_service_id FK "NULLABLE"
-  }
-
-  PROFESSIONAL_SHIFTS {
-    UUID id PK
-    UUID professional_id FK "NOT NULL"
-    UUID service_id FK "NOT NULL"
-    datetime started_at "NOT NULL"
-    datetime ended_at "NULLABLE"
-  }
-
-  TICKETS {
-    UUID id PK
-    UUID service_id FK "NOT NULL"
-    string client_name "NOT NULL"
-    string category "NOT NULL: Priority|Medium|Low"
-    datetime issued_at "NOT NULL"
-  }
-
-  ATTENDANCES {
-    UUID id PK
-    UUID service_id FK "NOT NULL"
-    UUID professional_id FK "NOT NULL"
-    UUID ticket_id FK "NOT NULL, UNIQUE"
-    datetime started_at "NOT NULL"
-    datetime ended_at "NULLABLE"
-  }
-
-  WEBHOOK_CONFIG {
-    int id PK
-    string url "NULLABLE"
-    datetime updated_at "NOT NULL"
-  }
-
-  SERVICES ||--o{ PROFESSIONALS : current_service_id
-
-  PROFESSIONALS ||--o{ PROFESSIONAL_SHIFTS : logs
-  SERVICES      ||--o{ PROFESSIONAL_SHIFTS : logs
-
-  SERVICES      ||--o{ TICKETS : service_id
-  SERVICES      ||--o{ ATTENDANCES : service_id
-  PROFESSIONALS ||--o{ ATTENDANCES : professional_id
-  TICKETS       ||--o| ATTENDANCES : ticket_id
-```
