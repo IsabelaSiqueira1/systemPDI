@@ -1,0 +1,33 @@
+basePath: /
+definitions:
+  http.serviceDTO:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: |-
+    Backend API for managing service-counter queues (ticketing system).
+    In-memory only (no database). Supports services, professionals, priority tickets, attendances and webhook notifications.
+  title: Queue Management API
+  version: 1.0.0
+paths:
+  /v1/services:
+    get:
+      description: Returns all registered services (in-memory).
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/http.serviceDTO'
+            type: array
+      summary: List services
+      tags:
+      - services
+swagger: "2.0"
