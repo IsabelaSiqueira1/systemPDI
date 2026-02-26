@@ -1,0 +1,583 @@
+openapi: 3.0.3
+
+info:
+  title: API de Gerenciamento de Filas de Atendimento
+  version: 1.0.0
+  description:
+    API para gerenciar filas de atendimento (guichês) com persistência em memória volátil.
+    Permite cadastrar serviços e profissionais, emitir fichas com prioridade, chamar próximo cliente,
+    encerrar atendimento e configurar webhook para notificação quando uma ficha for chamada.
+
+servers:
+  - url: http://localhost:8080
+
+tags:
+  - name: Serviços
+  - name: Profissionais
+  - name: Fichas
+  - name: Atendimentos
+  - name: Webhook
+
+paths:
+  /v1/services:
+    get:
+      tags: [Serviços]
+      summary: Listar serviços
+      description: Retorna todos os serviços cadastrados.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Servico'
+
+    post:
+      tags: [Serviços]
+      summary: Criar serviço
+      description: Cria um novo serviço no catálogo.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CriarServicoRequest'
+      responses:
+        '201':
+          description: Criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Servico'
+        '400':
+          description: Requisição inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroPadrao'
+        '409':
+          description: Serviço já existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroPadrao'
+
+  /v1/professionals:
+    post:
+      tags: [Profissionais]
+      summary: Cadastrar profissional
+      description: Cadastra um novo profissional.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CriarProfissionalRequest'
+      responses:
+        '201':
+          description: Criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profissional'
+        '400':
+          description: Requisição inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroPadrao'
+        '409':
+          description: Email já cadastrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroPadrao'
+
+  /v1/professionals/{professionalId}/service:
+    put:
+      tags: [Profissionais]
+      summary: Vincular profissional a um serviço
+      description: Vincula um profissional a um serviço.
+      parameters:
+        - name: professionalId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Identificador do profissional
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VincularProfissionalServicoRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profissional'
+        '404':
+          description: Profissional ou serviço não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroPadrao'
+        '409':
+          description: Conflito de estado (status inválido, já vinculado, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroPadrao'
+
+  /v1/services/{serviceId}/professionals/{professionalId}/start-shift:
+    put:
+      tags: [Profissionais]
+      summary: Iniciar expediente
+      description: Inicia expediente e altera status do profissional para DISPONIVEL.
+      parameters:
+        - name: serviceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Identificador do serviço
+        - name: professionalId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Identificador do profissional
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profissional'
+        '403':
+          description: Profissional não pertence ao serviço
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroPadrao'
+        '404':
+          description: Serviço ou profissional não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroPadrao'
+        '409':
+          description: Conflito de estado (já em expediente, status = OCUPADO)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroPadrao'
+
+  /v1/services/{serviceId}/professionals/{professionalId}/end-shift:
+    put:
+      tags: [Profissionais]
+      summary: Encerrar expediente
+      description: Encerra expediente e altera status do profissional para INDISPONIVEL.
+      parameters:
+        - name: serviceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Identificador do serviço
+        - name: professionalId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Identificador do profissional
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profissional'
+        '403':
+          description: Profissional não pertence ao serviço
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroPadrao'
+        '404':
+          description: Serviço ou profissional não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroPadrao'
+        '409':
+          description: Conflito de estado (fila não vazia, status = OCUPADO)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroPadrao'
+
+  /v1/services/{serviceId}/tickets:
+    post:
+      tags: [Fichas]
+      summary: Emitir ficha
+      description: Emite uma ficha para um serviço e enfileira por prioridade.
+      parameters:
+        - name: serviceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Identificador do serviço
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmitirFichaRequest'
+      responses:
+        '201':
+          description: Criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ficha'
+        '400':
+          description: Requisição inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroPadrao'
+        '404':
+          description: Serviço não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroPadrao'
+
+  /v1/services/{serviceId}/calls:
+    post:
+      tags: [Atendimentos]
+      summary: Chamar próximo cliente
+      description: Chama a próxima ficha da fila, cria atendimento e dispara webhook.
+      parameters:
+        - name: serviceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Identificador do serviço
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChamarProximoRequest'
+      responses:
+        '201':
+          description: Criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Atendimento'
+        '403':
+          description: Profissional não pertence ao serviço
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroPadrao'
+        '404':
+          description: Serviço ou profissional não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroPadrao'
+        '409':
+          description: Conflito de estado (profissional não DISPONIVEL, fila vazia, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroPadrao'
+
+  /v1/services/{serviceId}/attendances/current/end:
+    put:
+      tags: [Atendimentos]
+      summary: Encerrar atendimento atual
+      description: Encerra o atendimento atual do profissional e altera status para DISPONIVEL.
+      parameters:
+        - name: serviceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Identificador do serviço
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EncerrarAtendimentoRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Atendimento'
+        '403':
+          description: Profissional não pertence ao serviço
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroPadrao'
+        '404':
+          description: Serviço ou profissional não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroPadrao'
+        '409':
+          description: Conflito de estado (não há atendimento em andamento, status inválido, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroPadrao'
+
+  /v1/webhook/config:
+    get:
+      tags: [Webhook]
+      summary: Consultar configuração do webhook
+      description: Retorna a configuração atual do webhook.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookConfig'
+
+    put:
+      tags: [Webhook]
+      summary: Configurar URL do webhook
+      description: Define/atualiza a URL para onde o sistema enviará webhooks quando uma ficha for chamada.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfigurarWebhookRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookConfig'
+        '400':
+          description: Requisição inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroPadrao'
+
+components:
+  schemas:
+    ErroPadrao:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          example: invalid_request
+        message:
+          type: string
+          example: Requisição inválida
+
+    Servico:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        name:
+          type: string
+          example: Cadastro
+
+    CriarServicoRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          example: Cadastro
+
+    StatusProfissional:
+      type: string
+      enum: [DISPONIVEL, OCUPADO, INDISPONIVEL]
+      description: Status atual do profissional.
+
+    Profissional:
+      type: object
+      required: [id, name, email, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 7a3b61a6-3b2b-4a1a-9b9e-2f0a5b7b8c1d
+        name:
+          type: string
+          example: Ana
+        email:
+          type: string
+          format: email
+          example: ana@exemplo.com
+        status:
+          $ref: '#/components/schemas/StatusProfissional'
+        current_service_id:
+          type: string
+          format: uuid
+          nullable: true
+          example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+
+    CriarProfissionalRequest:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+          example: Ana
+        email:
+          type: string
+          format: email
+          example: ana@exemplo.com
+        password:
+          type: string
+          example: senha123
+
+    VincularProfissionalServicoRequest:
+      type: object
+      required: [service_id]
+      properties:
+        service_id:
+          type: string
+          format: uuid
+          example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+
+    CategoriaFicha:
+      type: string
+      enum: [Priority, Medium, Low]
+      description: Categoria/prioridade da ficha.
+
+    Ficha:
+      type: object
+      required: [id, service_id, client_name, category, issued_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 1c4b1b5f-4d1f-4f9b-8a62-7f7e7e9a2a10
+        service_id:
+          type: string
+          format: uuid
+          example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        client_name:
+          type: string
+          example: João
+        category:
+          $ref: '#/components/schemas/CategoriaFicha'
+        issued_at:
+          type: string
+          format: date-time
+          example: "2026-02-25T10:00:00Z"
+
+    EmitirFichaRequest:
+      type: object
+      required: [client_name, category]
+      properties:
+        client_name:
+          type: string
+          example: João
+        category:
+          $ref: '#/components/schemas/CategoriaFicha'
+
+    Atendimento:
+      type: object
+      required: [id, service_id, professional_id, ticket_id, started_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 2d94b3fb-2b1b-4c14-a2f5-9cc8b5a63e6a
+        service_id:
+          type: string
+          format: uuid
+          example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        professional_id:
+          type: string
+          format: uuid
+          example: 7a3b61a6-3b2b-4a1a-9b9e-2f0a5b7b8c1d
+        ticket_id:
+          type: string
+          format: uuid
+          example: 1c4b1b5f-4d1f-4f9b-8a62-7f7e7e9a2a10
+        started_at:
+          type: string
+          format: date-time
+          example: "2026-02-25T10:05:00Z"
+        ended_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+
+    ChamarProximoRequest:
+      type: object
+      required: [professional_id]
+      properties:
+        professional_id:
+          type: string
+          format: uuid
+          example: 7a3b61a6-3b2b-4a1a-9b9e-2f0a5b7b8c1d
+
+    EncerrarAtendimentoRequest:
+      type: object
+      required: [professional_id]
+      properties:
+        professional_id:
+          type: string
+          format: uuid
+          example: 7a3b61a6-3b2b-4a1a-9b9e-2f0a5b7b8c1d
+
+    WebhookConfig:
+      type: object
+      properties:
+        url:
+          type: string
+          nullable: true
+          example: https://exemplo.com/webhook
+        updated_at:
+          type: string
+          format: date-time
+          example: "2026-02-25T10:00:00Z"
+
+    ConfigurarWebhookRequest:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          example: https://exemplo.com/webhook
