@@ -11,9 +11,9 @@ type serviceDTO struct {
 }
 
 // ListServices godoc
-// @Summary List services
-// @Description Returns all registered services (in-memory).
-// @Tags services
+// @Summary Listar serviços
+// @Description Retorna todos os serviços cadastrados.
+// @Tags serviços
 // @Produce json
 // @Success 200 {array} serviceDTO
 // @Router /v1/services [get]

@@ -15,6 +15,7 @@ func NewRouter() http.Handler {
 
 	r.Route("/v1", func(r chi.Router) {
 		r.Get("/services", h.ListServices)
+		r.Post("/services", h.CreateService)
 	})
 
 	return r
