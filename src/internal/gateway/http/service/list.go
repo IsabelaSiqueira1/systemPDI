@@ -1,14 +1,9 @@
-package http
+package service
 
 import (
 	"encoding/json"
 	"net/http"
 )
-
-type serviceDTO struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-}
 
 // ListServices godoc
 // @Summary Listar serviços
@@ -17,8 +12,8 @@ type serviceDTO struct {
 // @Produce json
 // @Success 200 {array} serviceDTO
 // @Router /v1/services [get]
-func (h *Handlers) ListServices(w http.ResponseWriter, r *http.Request) {
-	services := h.Services.List()
+func (h *Handler) ListServices(w http.ResponseWriter, r *http.Request) {
+	services := h.services.List()
 
 	out := make([]serviceDTO, 0, len(services))
 	for _, s := range services {

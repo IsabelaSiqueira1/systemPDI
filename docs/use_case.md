@@ -186,13 +186,13 @@ Pré-condições:
 
 Fluxo Principal:
 
-1.  O profissional solicita iniciar expediente.
-2.  O sistema valida se o serviço existe.
-3.  O sistema valida se o profissional pertence ao serviço.
-4.  O sistema valida se o profissional não está OCUPADO.
-5.  O sistema altera o status do profissional para DISPONIVEL.
-6.  O sistema cria registro de atuação profissional (professional_id, service_id, started_at)
-6.  O sistema confirma a operação.
+1. O profissional solicita iniciar expediente.
+2. O sistema valida se o serviço existe.
+3. O sistema valida se o profissional pertence ao serviço.
+4. O sistema valida se o profissional não está OCUPADO.
+5. O sistema altera o status do profissional para DISPONIVEL.
+6. O sistema cria registro de atuação profissional (professional_id, service_id, started_at)
+6. O sistema confirma a operação.
 
 Exceções:
 

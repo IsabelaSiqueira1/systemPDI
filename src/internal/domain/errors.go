@@ -9,7 +9,15 @@ import (
 var (
 	ErrServiceNameRequired  = errors.New("nome do serviço é obrigatróio")
 	ErrServiceAlreadyExists = errors.New("serviço já existe")
-	ErrNotImplemented       = errors.New("not implemented")
+	ErrServiceNotFound      = errors.New("serviço não encontrado")
+
+	ErrProfessionalNotFound         = errors.New("profissional não encontrado")
+	ErrProfessionalNameRequired     = errors.New("nome do profissional é obrigatório")
+	ErrProfessionalEmailRequired    = errors.New("email é obrigatório")
+	ErrProfessionalPasswordRequired = errors.New("senha é obrigatória")
+	ErrProfessionalEmailInvalid     = errors.New("email inválido")
+	ErrProfessionalEmailAlreadyUsed = errors.New("email já cadastrado")
+	ErrProfessionalMustBeOffDuty    = errors.New("profissional deve estar INDISPONIVEL para ser vinculado a um serviço")
 )
 
 type APIError struct {
