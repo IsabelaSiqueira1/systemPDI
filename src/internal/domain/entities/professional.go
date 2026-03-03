@@ -9,11 +9,10 @@ const (
 )
 
 type Professional struct {
-	ID           string
-	Name         string
-	Email        string
-	PasswordHash string
+	ID    string
+	Name  string
+	Email string
 
-	Status           ProfessionalStatus
+	Status    ProfessionalStatus
 	ServiceID *string
 }
