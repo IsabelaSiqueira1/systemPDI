@@ -19,7 +19,21 @@ func NewProfessionalsRepository() *ProfessionalsRepository {
 	}
 }
 
-func (r *ProfessionalsRepository) Create(professional entities.Professional) (entities.Professional, error) {
+func (r *ProfessionalsRepository) ExistsByEmail(email string) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	normalizedEmail := strings.TrimSpace(email)
+	for _, p := range r.professionals {
+		if strings.EqualFold(p.Email, normalizedEmail) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (r *ProfessionalsRepository) Save(professional entities.Professional) (entities.Professional, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -31,6 +45,10 @@ func (r *ProfessionalsRepository) Create(professional entities.Professional) (en
 
 	r.professionals = append(r.professionals, professional)
 	return professional, nil
+}
+
+func (r *ProfessionalsRepository) Create(professional entities.Professional) (entities.Professional, error) {
+	return r.Save(professional)
 }
 
 func (r *ProfessionalsRepository) FindByID(id string) (entities.Professional, error) {

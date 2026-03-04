@@ -1,6 +1,45 @@
 basePath: /
 definitions:
-  http.serviceDTO:
+  domain.APIError:
+    properties:
+      code:
+        type: string
+      message:
+        type: string
+    type: object
+  professional.assignServiceRequest:
+    properties:
+      service_id:
+        type: string
+    type: object
+  professional.createProfessionalRequest:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        type: string
+    type: object
+  professional.professionalDTO:
+    properties:
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      service_id:
+        type: string
+      status:
+        type: string
+    type: object
+  service.createServiceRequest:
+    properties:
+      name:
+        type: string
+    type: object
+  service.serviceDTO:
     properties:
       id:
         type: string
@@ -15,9 +54,78 @@ info:
   title: Queue Management API
   version: 1.0.0
 paths:
+  /v1/professionals:
+    post:
+      consumes:
+      - application/json
+      description: Cadastra um novo profissional.
+      parameters:
+      - description: Payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/professional.createProfessionalRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/professional.professionalDTO'
+        "400":
+          description: Requisição inválida
+          schema:
+            $ref: '#/definitions/domain.APIError'
+        "409":
+          description: Email já cadastrado
+          schema:
+            $ref: '#/definitions/domain.APIError'
+      summary: Cadastrar profissional
+      tags:
+      - Profissionais
+  /v1/professionals/{professionalId}/service:
+    put:
+      consumes:
+      - application/json
+      description: Vincula um profissional a um serviço.
+      parameters:
+      - description: ID do profissional
+        in: path
+        name: professionalId
+        required: true
+        type: string
+      - description: Payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/professional.assignServiceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/professional.professionalDTO'
+        "400":
+          description: Requisição inválida
+          schema:
+            $ref: '#/definitions/domain.APIError'
+        "404":
+          description: Profissional ou serviço não encontrado
+          schema:
+            $ref: '#/definitions/domain.APIError'
+        "409":
+          description: Profissional não está INDISPONIVEL
+          schema:
+            $ref: '#/definitions/domain.APIError'
+      summary: Vincular profissional a um serviço
+      tags:
+      - Profissionais
   /v1/services:
     get:
-      description: Returns all registered services (in-memory).
+      description: Retorna todos os serviços cadastrados.
       produces:
       - application/json
       responses:
@@ -25,9 +133,38 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/http.serviceDTO'
+              $ref: '#/definitions/service.serviceDTO'
             type: array
-      summary: List services
+      summary: Listar serviços
       tags:
-      - services
+      - serviços
+    post:
+      consumes:
+      - application/json
+      description: Creates a new service in the catalog.
+      parameters:
+      - description: Payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/service.createServiceRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/service.serviceDTO'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/domain.APIError'
+        "409":
+          description: Service already exists
+          schema:
+            $ref: '#/definitions/domain.APIError'
+      summary: Create service
+      tags:
+      - Services
 swagger: "2.0"

@@ -329,46 +329,51 @@ O cadastro de um profissional no sistema, com validação do nome e persistênci
 - A senha recebida é transformada internamente em passwordHash. 
 
 ```mermaid
-
 sequenceDiagram
     actor Admin as Administrador
-    participant API as "API (ProfissionaisController)"
-    participant SVC as "ProfissionalService"
-    participant Repo as "ProfissionalRepo (memoria)"
+    participant API as "ProfessionalsController"
+    participant SVC as "ProfessionalsRepository"
+    participant Repo as "ProfessionalsRepository"
 
-    Admin->>API: POST /profissionais {name, email, password}
-    API->>SVC: cadastrarProfissional(name, email, password)
+    Admin->>API: POST /professional
+    API->>SVC: Create(name, email, password)
 
-    alt nome vazio ou so espacos
-        SVC-->>API: erro 400 (nome invalido)
+    alt empty name
+        SVC-->>API: error (name required)
         API-->>Admin: 400
-    else nome ok
+    else name ok
 
-        alt email invalido
-            SVC-->>API: erro 400 (email invalido)
+        alt empty email address
+            SVC-->>API: error (email required)
             API-->>Admin: 400
-        else email valido
+        else valid email address
 
-            SVC->>Repo: existePorEmail(email)?
-            alt email ja cadastrado
-                Repo-->>SVC: true
-                SVC-->>API: erro 409 (email ja cadastrado)
-                API-->>Admin: 409
-            else email livre
-                Repo-->>SVC: false
+            alt invalid email address
+                SVC-->>API: error (email invalid)
+                API-->>Admin: 400
+            else valid email address
 
-                SVC->>SVC: gerarPasswordHash(password)
-                SVC->>SVC: criarProfissional(id, name, email, password, status=INDISPONIVEL, idService=null)
+                SVC->>Repo: existsByEmail(email)?
+                alt email address already registered
+                    Repo-->>SVC: true
+                    SVC-->>API: error (email already registered)
+                    API-->>Admin: 409
+                else email address not registered
+                    Repo-->>SVC: false
 
-                SVC->>Repo: salvar(profissional)
-                alt falha ao salvar
-                    Repo-->>SVC: erropassword: string
-                    SVC-->>API: erro 500 (falha interna)
-                    API-->>Admin: 500
-                else salvo com sucesso
-                    Repo-->>SVC: profissionalCriado
-                    SVC-->>API: profissionalDTO
-                    API-->>Admin: 201 Created + JSON
+                    SVC->>SVC: generatePasswordHash(password)
+                    SVC->>SVC: createProfessional(id, name, email, password, status=UNAVAILABLE, serviceId=null)
+
+                    SVC->>Repo: save(professional)
+                    alt failed to save
+                        Repo-->>SVC: error password: string
+                        SVC-->>API: error(internal failure)
+                        API-->>Admin: 500
+                    else successfully saved
+                        Repo-->>SVC: professionalCreate
+                        SVC-->>API: professionalDTO
+                        API-->>Admin: 201 Created + JSON
+                    end
                 end
             end
         end

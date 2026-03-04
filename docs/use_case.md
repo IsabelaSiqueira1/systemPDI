@@ -135,7 +135,7 @@ Fluxo Principal:
 
 Exceções:
 
-- Nome não informado / inválido: retorna erro.
+- Nome não informado: retorna erro.
 - Email já cadastrado: retorna erro.
 - Profissional duplicado (se você quiser regra por nome): retorna erro.
 - Falha interna ao criar: retorna erro e loga.
