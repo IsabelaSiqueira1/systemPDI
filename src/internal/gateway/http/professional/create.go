@@ -22,7 +22,7 @@ import (
 func (h *Handler) CreateProfessional(w http.ResponseWriter, r *http.Request) {
 	var req createProfessionalRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		domain.WriteError(w, http.StatusBadRequest, "invalid_body", "JSON inválido")
+		domain.WriteError(w, http.StatusBadRequest, "JSON inválido")
 		return
 	}
 

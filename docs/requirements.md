@@ -14,7 +14,7 @@ Criar o back-end de uma aplicação para gerenciamento de filas de atendimento (
 - cadastro e listagem de serviços (catálogo de serviços)
 - registro de profissionais
 - vínculo do profissional a um serviço (seleção de serviço ao iniciar expediente)
-- controle de status do profissional (DISPONIVEL, OCUPADO, INDISPONIVEL)
+- controle de status do profissional (AVAILABLE, BUSY, UNAVAILABLE)
 - emissão de fichas por clientes com categoria de prioridade
 - chamada do próximo cliente
 - encerramento de atendimento
@@ -39,14 +39,14 @@ informando nome, email e senha.
 - O sistema deve registrar o histórico de atuação do profissional,
 armazenando quando iniciou e quando encerrou o expediente em determinado serviço,
 independentemente da existência de atendimentos realizados.
-- O sistema deve permitir que um profissional encerre expediente (ficando INDISPONIVEL).
+- O sistema deve permitir que um profissional encerre expediente (ficando UNAVAILABLE).
 - O sistema deve permitir que um profissional se vincule a um serviço existente (selecionar serviço ao iniciar expediente).
 - O sistema deve permitir que o profissional altere seu status entre:
-  - DISPONIVEL (no expediente e apto a atender)
-  - INDISPONIVEL (fora do expediente / não participa da fila)
-  - OCUPADO (durante um atendimento)
-- O sistema deve colocar o profissional em OCUPADO ao chamar o próximo cliente e voltar para DISPONIVEL ao encerrar atendimento.
--O sistema deve impedir que um profissional altere de serviço (ou inicie expediente em outro serviço) enquanto estiver OCUPADO.
+  - AVAILABLE (no expediente e apto a atender)
+  - UNAVAILABLE (fora do expediente / não participa da fila)
+  - BUSY (durante um atendimento)
+- O sistema deve colocar o profissional em BUSY ao chamar o próximo cliente e voltar para AVAILABLE ao encerrar atendimento.
+-O sistema deve impedir que um profissional altere de serviço (ou inicie expediente em outro serviço) enquanto estiver BUSY.
 - O sistema deve impedir cadastro de profissionais com email já existente.
 
 #### Fichas e Fila
@@ -60,7 +60,7 @@ independentemente da existência de atendimentos realizados.
 - O sistema deve fornecer endpoint para que um profissional encerre o atendimento atual.
 - O sistema deve impedir chamada de próximo cliente quando:
   - o profissional não estiver vinculado ao serviço,
-  - o profissional não estiver DISPONIVEL,
+  - o profissional não estiver AVAILABLE,
   - a fila estiver vazia.
 
 #### Webhook
@@ -89,20 +89,20 @@ independentemente da existência de atendimentos realizados.
 - Um profissional deve selecionar/vincular-se a um serviço para poder atender.
 - Um profissional só pode atuar no serviço ao qual está vinculado.
 - Um profissional só pode estar vinculado a no máximo 1 serviço por vez.
-- Para trocar de serviço, o profissional deve encerrar o expediente (ficar INDISPONIVEL) e então iniciar expediente novamente escolhendo outro serviço.
+- Para trocar de serviço, o profissional deve encerrar o expediente (ficar UNAVAILABLE) e então iniciar expediente novamente escolhendo outro serviço.
 
 #### Sobre status do profissional
 
-- Só é possível chamar o próximo cliente se o profissional estiver DISPONIVEL.
-- Um profissional OCUPADO não pode chamar o próximo cliente.
-- Um profissional INDISPONIVEL não participa do atendimento e não pode chamar o próximo cliente.
-- Um profissional só pode ficar INDISPONIVEL se não estiver OCUPADO.
+- Só é possível chamar o próximo cliente se o profissional estiver AVAILABLE.
+- Um profissional BUSY não pode chamar o próximo cliente.
+- Um profissional UNAVAILABLE não participa do atendimento e não pode chamar o próximo cliente.
+- Um profissional só pode ficar UNAVAILABLE se não estiver BUSY.
 - Ao chamar o próximo cliente:
   - o sistema cria um atendimento com inicioEm,
-  - e altera o status do profissional para OCUPADO.
+  - e altera o status do profissional para BUSY.
 - Ao encerrar atendimento:
   - o sistema registra fimEm,
-  - e altera o status do profissional para DISPONIVEL.
+  - e altera o status do profissional para AVAILABLE.
 - Um profissional não pode encerrar expediente enquanto existirem clientes aguardando atendimento na fila do serviço.
 
 #### Sobre fila e fichas

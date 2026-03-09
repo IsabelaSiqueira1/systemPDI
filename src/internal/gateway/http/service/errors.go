@@ -10,10 +10,10 @@ import (
 func respondServiceError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, domain.ErrServiceNameRequired):
-		domain.WriteError(w, http.StatusBadRequest, "name_required", "Service name is required.")
+		domain.WriteError(w, http.StatusBadRequest, "Nome do serviço é obrigatório")
 	case errors.Is(err, domain.ErrServiceAlreadyExists):
-		domain.WriteError(w, http.StatusConflict, "service_already_exists", "Service already exists.")
+		domain.WriteError(w, http.StatusConflict, "Serviço já existe")
 	default:
-		domain.WriteError(w, http.StatusInternalServerError, "internal_error", "Internal server error.")
+		domain.WriteError(w, http.StatusInternalServerError, "Erro interno")
 	}
 }

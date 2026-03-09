@@ -151,25 +151,28 @@ Pré-condições:
 
 - O profissional deve existir.
 - O serviço deve existir.
-- O profissional deve estar INDISPONIVEL
-- profissional não pode estar OCUPADO ou DISPONIVEL
+- O serviço informado deve possuir id válido (não vazio/branco).
+- O profissional deve estar UNAVAILABLE
+- profissional não pode estar BUSY ou AVAILABLE
 
 Fluxo Principal:
 
 1. O profissional solicita vincular-se a um serviço.
 2. O sistema valida se o profissional existe.
 3. O sistema valida se o serviço existe.
-4. O sistema valida que o profissional está INDISPONIVEL.
-5. O sistema registra o vínculo (profissional.service_id = serviço.id).
-6. O sistema confirma a operação.
+4. O sistema valida que o id do serviço foi informado corretamente.
+5. O sistema valida que o profissional está UNAVAILABLE.
+6. O sistema registra o vínculo (profissional.service_id = serviço.id).
+7. O sistema confirma a operação.
 
 Exceções:
 
 - Serviço inexistente: retorna erro.
 - Profissional inexistente: retorna erro.
-- Profissional OCUPADO: retorna erro (não pode trocar de serviço em atendimento).
+- service_id vazio/branco: retorna erro (requisição inválida).
+- Profissional BUSY: retorna erro (não pode trocar de serviço em atendimento).
 - Falha interna ao alterar vínculo: retorna erro e loga.
-- Profissional OCUPADO OU DISPONIVEL: retorna erro
+- Profissional BUSY OU AVAILABLE: retorna erro
 
 ---
 
@@ -182,15 +185,15 @@ Pré-condições:
 
 - O serviço deve existir.
 - O profissional deve estar vinculado ao serviço.
-- O profissional não pode estar OCUPADO.
+- O profissional não pode estar BUSY.
 
 Fluxo Principal:
 
 1. O profissional solicita iniciar expediente.
 2. O sistema valida se o serviço existe.
 3. O sistema valida se o profissional pertence ao serviço.
-4. O sistema valida se o profissional não está OCUPADO.
-5. O sistema altera o status do profissional para DISPONIVEL.
+4. O sistema valida se o profissional não está BUSY.
+5. O sistema altera o status do profissional para AVAILABLE.
 6. O sistema cria registro de atuação profissional (professional_id, service_id, started_at)
 6. O sistema confirma a operação.
 
@@ -199,7 +202,7 @@ Exceções:
 - Serviço inexistente: retorna erro.
 - Já existe expediente ativo para o profissional.
 - Profissional não vinculado ao serviço: bloqueia/retorna erro.
-- Profissional está OCUPADO: retorna erro (“encerre o atendimento antes de iniciar expediente”).
+- Profissional está BUSY: retorna erro (“encerre o atendimento antes de iniciar expediente”).
 - Erro interno ao alterar o estado: registra log e retorna erro.
 
 ---
@@ -213,16 +216,16 @@ Pré-condições:
 
 - O serviço deve existir.
 - O profissional deve estar vinculado ao serviço.
-- O profissional não pode estar OCUPADO.
-- O profissional deve estar DISPONIVEL. 
+- O profissional não pode estar BUSY.
+- O profissional deve estar AVAILABLE. 
 
 Fluxo Principal:
 
 1.  O profissional solicita encerrar expediente.
 2.  O sistema valida se o serviço existe.
 3.  O sistema valida se o profissional pertence ao serviço.
-4.  O sistema valida se o profissional não está OCUPADO.
-5.  O sistema altera o status do profissional para INDISPONIVEL.
+4.  O sistema valida se o profissional não está BUSY.
+5.  O sistema altera o status do profissional para UNAVAILABLE.
 6.  O sistema finaliza o registro de atuação aberto (ended_at)
 7.  O sistema remove vínculo com serviço (service_id = null)
 6.  O sistema confirma a operação.
@@ -231,7 +234,7 @@ Exceções:
 
 - Serviço inexistente: retorna erro.
 - Profissional não vinculado ao serviço: bloqueia/retorna erro.
-- Profissional está OCUPADO: retorna erro (“encerre o atendimento antes de encerrar expediente”).
+- Profissional está BUSY: retorna erro (“encerre o atendimento antes de encerrar expediente”).
 - Se existir ficha na fila → bloquear.
 - Erro interno ao alterar o estado: registra log e retorna erro.
 
@@ -246,23 +249,23 @@ Pré-condição:
 
 - O serviço deve existir.
 - O profissional deve estar vinculado ao serviço informado.
-- O profissional deve estar com status OCUPADO.
+- O profissional deve estar com status BUSY.
 
 Fluxo Principal:
 
 1. O profissional solicita encerrar o atendimento atual.
 2. O sistema valida se o serviço existe.
 3. O sistema valida se o profissional pertence ao serviço.
-4. O sistema valida se o profissional está OCUPADO.
+4. O sistema valida se o profissional está BUSY.
 5. O sistema registra o fim do atendimento atual.
-6. O sistema altera o status do profissional para DISPONIVEL.
+6. O sistema altera o status do profissional para AVAILABLE.
 7. O sistema confirma a operação.
 
 Exceções:
 
 - Serviço inexistente: o sistema retorna erro.
 - Profissional não vinculado ao serviço: o sistema bloqueia a operação.
-- Profissional não está OCUPADO: o sistema retorna erro.
+- Profissional não está BUSY: o sistema retorna erro.
 - Profissional tentando encerrar atendimento de outro profissional (ID incorreto enviado): o sistema rejeita a operação.
 - Erro interno ao alterar o estado: o sistema registra log e retorna erro.
 
@@ -296,7 +299,7 @@ Exceções:
 - Nome do cliente não informado: o sistema retorna erro.
 - Categoria inválida: O sistema retorna erro.
 - Serviço inexistente: O sistema retorna erro.
-- Serviço existe mas não há profissional DISPONIVEL: O sistema emite a ficha normalmente e pode retornar um aviso informativo.
+- Serviço existe mas não há profissional AVAILABLE: O sistema emite a ficha normalmente e pode retornar um aviso informativo.
 - Fila do serviço corrompida(erro na memoria):o sistema registra o erro e loga.
 
 ---
@@ -310,7 +313,7 @@ Pré-condições:
 
 - O serviço deve existir.
 - O profissional deve estar vinculado ao serviço existente.
-- O profissional deve estar com status DISPONIVEL.
+- O profissional deve estar com status AVAILABLE.
 - Deve existir cliente na fila.
 
 Fluxo Principal:
@@ -318,11 +321,11 @@ Fluxo Principal:
 1.  O profissional solicita chamar o próximo cliente.
 2.  O sistema valida se o serviço existe.
 3.  O sistema valida se o profissional pertence ao serviço.
-4.  O sistema valida se o profissional está DISPONIVEL.
+4.  O sistema valida se o profissional está AVAILABLE.
 5.  O sistema valida que a fila não está vazia.
 6.  O sistema seleciona a próxima ficha (Priority → Medium → Low + FIFO).
 7.  O sistema cria um Atendimento (inicioEm e associações).
-8.  O sistema muda status do profissional para OCUPADO.
+8.  O sistema muda status do profissional para BUSY.
 9.  O sistema envia o webhook.
 10. O sistema retorna os dados do atendimento.
 
@@ -330,8 +333,8 @@ Exceções:
 
 - Serviço inexistente: retorna erro.
 - Profissional não pertence ao serviço: retorna erro/bloqueia.
-- Profissional INDISPONIVEL: retorna erro.
-- Profissional OCUPADO: retorna erro (precisa encerrar antes).
+- Profissional UNAVAILABLE: retorna erro.
+- Profissional BUSY: retorna erro (precisa encerrar antes).
 - Fila vazia: retorna erro.
 - Falha ao criar atendimento: retorna erro e loga.
 - Webhook falhou: loga e prossegue.

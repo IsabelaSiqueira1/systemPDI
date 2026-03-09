@@ -405,69 +405,72 @@ O fluxo onde o profissional seleciona um serviço disponível para atuar, regist
 
 - Entrada mínima: idProfissional, idServico
 - Saída de sucesso: confirmação (200 OK) e/ou profissional atualizado
-- Erros que interrompem: profissional inexistente, serviço inexistente, profissional OCUPADO, erro interno ao atualizar
+- Erros que interrompem: profissional inexistente, serviço inexistente, serviceId inválido (vazio/branco), profissional fora de UNAVAILABLE, profissional já vinculado, erro interno ao atualizar
 
 #### Pontos de decisão (alts)
 
 1. Profissional existe?
-2. Serviço existe?
-3. Profissional está OCUPADO?
+2. serviceId é válido?
+3. Serviço existe?
+4. Profissional está UNAVAILABLE?
+5. Profissional já possui serviço vinculado?
 
 ### Decisões de modelagem
 
-- Se o profissional estiver OCUPADO, não pode trocar de serviço.
+- Se o profissional estiver BUSY, não pode trocar de serviço.
 - Se profissional.idService já estiver preenchido → bloquear (409).
 
 ```mermaid
 
 sequenceDiagram
-    actor Prof as Profissional
-    participant API as "API (ProfissionaisController)"
-    participant SVC as "ProfissionalService"
-    participant PRepo as "ProfissionalRepo (memoria)"
-    participant SRepo as "ServicoRepo (memoria)"
+    actor Prof as Professional
+    participant API as "ProfessionalsController"
+    participant SVC as "ProfessionalsService"
+    participant PRepo as "ProfessionalsRepository"
+    participant SRepo as "ServicesRepository"
 
-    Prof->>API: PUT /v1/profissionais/{idProf}/vincular-servico {idServico}
-    API->>SVC: vincularServico(idProfissional, idServico)
+    Prof->>API: PUT /v1/professionals/{professionalId}/service {serviceId}
+    alt serviceId empty/blank
+        API-->>Prof: 400
+    else serviceId valid
+        API->>SVC: AssignService(professionalId, serviceId)
 
-    SVC->>PRepo: buscarProfissional(idProfissional)
-    alt profissional nao existe
-        PRepo-->>SVC: null
-        SVC-->>API: erro 404 (profissional nao encontrado)
-        API-->>Prof: 404
-    else profissional existe
-        PRepo-->>SVC: Profissional
+        SVC->>PRepo: findProfessional(professionalId)
+        alt professional not found
+            PRepo-->>SVC: null
+            SVC-->>API: error (professional not found)
+            API-->>Prof: 404
+        else professional exists
+            PRepo-->>SVC: Professional
 
-        alt status == OCUPADO
-            SVC-->>API: erro 409 (profissional em atendimento)
-            API-->>Prof: 409
-        else status == DISPONIVEL
-            SVC-->>API: erro 409 (encerre expediente antes de vincular/trocar servico)
-            API-->>Prof: 409
-        else status == INDISPONIVEL
+            SVC->>SRepo: findService(serviceId)
+            alt service not found
+                SRepo-->>SVC: null
+                SVC-->>API: error (service not found)
+                API-->>Prof: 404
+            else service exists
+                SRepo-->>SVC: Service
 
-            alt profissional ja possui servico vinculado (idService != null)
-                SVC-->>API: erro 409 (profissional ja vinculado&#59; encerre expediente para trocar)
-                API-->>Prof: 409
-            else sem servico vinculado (idService == null)
+                alt status != UNAVAILABLE
+                    SVC-->>API: error (professional must be UNAVAILABLE)
+                    API-->>Prof: 409
+                else status == UNAVAILABLE
 
-                SVC->>SRepo: buscarServico(idServico)
-                alt servico nao existe
-                    SRepo-->>SVC: null
-                    SVC-->>API: erro 404 (servico nao encontrado)
-                    API-->>Prof: 404
-                else servico existe
-                    SRepo-->>SVC: Servico
+                    alt professional already has service assigned (serviceId != null)
+                        SVC-->>API: error (professional already assigned&#59; end shift before changing)
+                        API-->>Prof: 409
+                    else no assigned service (serviceId == null)
 
-                    SVC->>PRepo: atualizarServicoDoProfissional(idProfissional, idServico)
-                    alt falha ao atualizar
-                        PRepo-->>SVC: erro
-                        SVC-->>API: erro 500 (falha interna)
-                        API-->>Prof: 500
-                    else atualizado com sucesso
-                        PRepo-->>SVC: ProfissionalAtualizado
-                        SVC-->>API: 200 OK (profissional atualizado)
-                        API-->>Prof: 200 OK + JSON
+                        SVC->>PRepo: updateProfessionalService(professionalId, serviceId)
+                        alt update failed
+                            PRepo-->>SVC: error
+                            SVC-->>API: error (internal failure)
+                            API-->>Prof: 500
+                        else updated successfully
+                            PRepo-->>SVC: UpdatedProfessional
+                            SVC-->>API: 200 OK (professional updated)
+                            API-->>Prof: 200 OK + JSON
+                        end
                     end
                 end
             end

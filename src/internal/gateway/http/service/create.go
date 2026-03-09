@@ -22,12 +22,12 @@ import (
 func (h *Handler) CreateService(w http.ResponseWriter, r *http.Request) {
 	var req createServiceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		domain.WriteError(w, http.StatusBadRequest, "invalid_body", "Invalid JSON")
+		domain.WriteError(w, http.StatusBadRequest, "JSON inválido")
 		return
 	}
 
 	if strings.TrimSpace(req.Name) == "" {
-		domain.WriteError(w, http.StatusBadRequest, "name_required", "Service name is required.")
+		domain.WriteError(w, http.StatusBadRequest, "Nome do serviço é obrigatório")
 		return
 	}
 

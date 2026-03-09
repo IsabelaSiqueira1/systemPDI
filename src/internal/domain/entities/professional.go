@@ -3,9 +3,9 @@ package entities
 type ProfessionalStatus string
 
 const (
-	ProfessionalAvailable ProfessionalStatus = "DISPONIVEL"
-	ProfessionalBusy      ProfessionalStatus = "OCUPADO"
-	ProfessionalOffDuty   ProfessionalStatus = "INDISPONIVEL"
+	ProfessionalAvailable ProfessionalStatus = "AVAILABLE"
+	ProfessionalBusy      ProfessionalStatus = "BUSY"
+	ProfessionalOffDuty   ProfessionalStatus = "UNAVAILABLE"
 )
 
 type Professional struct {

@@ -3,6 +3,7 @@ package professional
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -24,23 +25,24 @@ type assignServiceRequest struct {
 // @Success 200 {object} professionalDTO
 // @Failure 400 {object} domain.APIError "Requisição inválida"
 // @Failure 404 {object} domain.APIError "Profissional ou serviço não encontrado"
-// @Failure 409 {object} domain.APIError "Profissional não está INDISPONIVEL"
+// @Failure 409 {object} domain.APIError "Profissional não está UNAVAILABLE ou já possui serviço vinculado"
+// @Failure 500 {object} domain.APIError "Erro interno"
 // @Router /v1/professionals/{professionalId}/service [put]
 func (h *Handler) AssignService(w http.ResponseWriter, r *http.Request) {
 	professionalID := chi.URLParam(r, "professionalId")
 	if professionalID == "" {
-		domain.WriteError(w, http.StatusBadRequest, "missing_professional_id", "ID do profissional é obrigatório")
+		domain.WriteError(w, http.StatusBadRequest, "ID do profissional é obrigatório")
 		return
 	}
 
 	var req assignServiceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		domain.WriteError(w, http.StatusBadRequest, "invalid_body", "JSON inválido")
+		domain.WriteError(w, http.StatusBadRequest, "JSON inválido")
 		return
 	}
 
-	if req.ServiceID == "" {
-		domain.WriteError(w, http.StatusBadRequest, "missing_service_id", "service_id é obrigatório")
+	if strings.TrimSpace(req.ServiceID) == "" {
+		domain.WriteError(w, http.StatusBadRequest, "service_id é obrigatório")
 		return
 	}
 

@@ -10,22 +10,24 @@ import (
 func respondProfessionalError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, domain.ErrProfessionalNotFound):
-		domain.WriteError(w, http.StatusNotFound, "professional_not_found", "Profissional não encontrado")
+		domain.WriteError(w, http.StatusNotFound, "Profissional não encontrado")
 	case errors.Is(err, domain.ErrServiceNotFound):
-		domain.WriteError(w, http.StatusNotFound, "service_not_found", "Serviço não encontrado")
+		domain.WriteError(w, http.StatusNotFound, "Serviço não encontrado")
 	case errors.Is(err, domain.ErrProfessionalMustBeOffDuty):
-		domain.WriteError(w, http.StatusConflict, "professional_not_off_duty", "Profissional deve estar INDISPONIVEL para ser vinculado")
+		domain.WriteError(w, http.StatusConflict, "Profissional deve estar UNAVAILABLE para ser vinculado")
+	case errors.Is(err, domain.ErrProfessionalAlreadyAssigned):
+		domain.WriteError(w, http.StatusConflict, "Profissional já possui serviço vinculado")
 	case errors.Is(err, domain.ErrProfessionalNameRequired):
-		domain.WriteError(w, http.StatusBadRequest, "name_required", "Nome é obrigatório")
+		domain.WriteError(w, http.StatusBadRequest, "Nome é obrigatório")
 	case errors.Is(err, domain.ErrProfessionalEmailRequired):
-		domain.WriteError(w, http.StatusBadRequest, "email_required", "Email é obrigatório")
+		domain.WriteError(w, http.StatusBadRequest, "Email é obrigatório")
 	case errors.Is(err, domain.ErrProfessionalPasswordRequired):
-		domain.WriteError(w, http.StatusBadRequest, "password_required", "Senha é obrigatória")
+		domain.WriteError(w, http.StatusBadRequest, "Senha é obrigatória")
 	case errors.Is(err, domain.ErrProfessionalEmailInvalid):
-		domain.WriteError(w, http.StatusBadRequest, "email_invalid", "Email inválido")
+		domain.WriteError(w, http.StatusBadRequest, "Email inválido")
 	case errors.Is(err, domain.ErrProfessionalEmailAlreadyUsed):
-		domain.WriteError(w, http.StatusConflict, "email_already_used", "Email já cadastrado")
+		domain.WriteError(w, http.StatusConflict, "Email já cadastrado")
 	default:
-		domain.WriteError(w, http.StatusInternalServerError, "internal_error", "Erro interno")
+		domain.WriteError(w, http.StatusInternalServerError, "Erro interno")
 	}
 }
