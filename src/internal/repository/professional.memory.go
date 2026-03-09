@@ -76,3 +76,23 @@ func (r *ProfessionalsRepository) UpdateServiceID(id string, serviceID *string) 
 
 	return entities.Professional{}, domain.ErrProfessionalNotFound
 }
+
+func (r *ProfessionalsRepository) UpdateStatus(id string, status entities.ProfessionalStatus) (entities.Professional, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	updated, found := r.professionals.Update(
+		func(p entities.Professional) bool {
+			return p.ID == id
+		},
+		func(p *entities.Professional) {
+			p.Status = status
+		},
+	)
+
+	if found {
+		return updated, nil
+	}
+
+	return entities.Professional{}, domain.ErrProfessionalNotFound
+}

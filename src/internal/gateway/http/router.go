@@ -19,12 +19,14 @@ func NewRouter() http.Handler {
 	servicesHandler := servicegateway.NewHandler(servicesSvc)
 
 	professionalsRepo := repository.NewProfessionalsRepository()
-	professionalsSvc := svcprofessional.NewService(professionalsRepo, servicesRepo)
+	attendanceRepo := repository.NewAttendancesRepository()
+	professionalsSvc := svcprofessional.NewService(professionalsRepo, servicesRepo, attendanceRepo)
 	professionalsHandler := professionalgateway.NewHandler(professionalsSvc)
 
 	r.Route("/v1", func(r chi.Router) {
 		r.Get("/services", servicesHandler.ListServices)
 		r.Post("/services", servicesHandler.CreateService)
+		r.Put("/services/{serviceId}/professionals/{professionalId}/start-shift", professionalsHandler.StartShift)
 
 		r.Post("/professionals", professionalsHandler.CreateProfessional)
 		r.Put("/professionals/{professionalId}/service", professionalsHandler.AssignService)

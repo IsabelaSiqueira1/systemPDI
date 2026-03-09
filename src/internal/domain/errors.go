@@ -19,6 +19,9 @@ var (
 	ErrProfessionalEmailAlreadyUsed = errors.New("email já cadastrado")
 	ErrProfessionalMustBeOffDuty    = errors.New("profissional deve estar UNAVAILABLE para ser vinculado a um serviço")
 	ErrProfessionalAlreadyAssigned  = errors.New("profissional já possui serviço vinculado")
+	ErrProfessionalServiceMismatch  = errors.New("profissional não está vinculado ao serviço informado")
+	ErrProfessionalBusy             = errors.New("profissional está BUSY")
+	ErrProfessionalAlreadyOnDuty    = errors.New("profissional já está em expediente")
 )
 
 type APIError struct {

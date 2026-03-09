@@ -17,6 +17,12 @@ func respondProfessionalError(w http.ResponseWriter, err error) {
 		domain.WriteError(w, http.StatusConflict, "Profissional deve estar UNAVAILABLE para ser vinculado")
 	case errors.Is(err, domain.ErrProfessionalAlreadyAssigned):
 		domain.WriteError(w, http.StatusConflict, "Profissional já possui serviço vinculado")
+	case errors.Is(err, domain.ErrProfessionalServiceMismatch):
+		domain.WriteError(w, http.StatusForbidden, "Profissional não pertence ao serviço")
+	case errors.Is(err, domain.ErrProfessionalBusy):
+		domain.WriteError(w, http.StatusConflict, "Profissional está BUSY")
+	case errors.Is(err, domain.ErrProfessionalAlreadyOnDuty):
+		domain.WriteError(w, http.StatusConflict, "Profissional já está em expediente")
 	case errors.Is(err, domain.ErrProfessionalNameRequired):
 		domain.WriteError(w, http.StatusBadRequest, "Nome é obrigatório")
 	case errors.Is(err, domain.ErrProfessionalEmailRequired):
