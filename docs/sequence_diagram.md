@@ -30,7 +30,7 @@ A sequência completa de mensagens entre **ator → API → camada de aplicaçã
 1. Serviço existe?
 2. Profissional existe?
 3. Profissional está vinculado ao serviço?
-4. Profissional está DISPONIVEL?
+4. Profissional está AVAILABLE?
 5. Fila tem ficha?
 6. Webhook tem URL configurada?
 7. Chamada do webhook foi bem sucedida?
@@ -76,8 +76,8 @@ sequenceDiagram
             alt profissional.idService != idServico
                 SVC-->>API: erro 403 (profissional nao pertence ao servico)
                 API-->>Prof: 403
-                alt profissional.status != DISPONIVEL
-                    SVC-->>API: erro 409 (profissional nao disponivel)
+                alt profissional.status != AVAILABLE
+                    SVC-->>API: erro 409 (profissional nao available)
                     API-->>Prof: 409
 
                     critical controle de concorrencia (fila + status)
@@ -91,7 +91,7 @@ sequenceDiagram
                             SVC->>ARepo: criarAtendimento(idServico,idProf,idFicha,inicioEm=agora)
                             ARepo-->>SVC: atendimento
 
-                            SVC->>PRepo: marcarProfissionalOcupado(idProfissional, OCUPADO)
+                            SVC->>PRepo: marcarProfissionalOcupado(idProfissional, BUSY)
                         end
                     end
 
@@ -127,7 +127,7 @@ sequenceDiagram
 
 ### O que este diagrama mostra
 
-O encerramento de um atendimento em andamento, registrando `fimEm` e liberando o profissional (`DISPONIVEL`), com validações principais usando `alt`.
+O encerramento de um atendimento em andamento, registrando `fimEm` e liberando o profissional (`AVAILABLE`), com validações principais usando `alt`.
 
 ### Participantes e papel
 
@@ -142,20 +142,20 @@ O encerramento de um atendimento em andamento, registrando `fimEm` e liberando o
 
 - Entrada mínima: `idServico`, `idProfissional`
 - Saída de sucesso: confirmação (200 OK) e/ou atendimento atualizado
-- Erros que interrompem: serviço inexistente, profissional não autorizado, profissional não OCUPADO, atendimento em aberto não encontrado, erro interno
+- Erros que interrompem: serviço inexistente, profissional não autorizado, profissional não BUSY, atendimento em aberto não encontrado, erro interno
 
 ### Pontos de decisão (alts)
 
 1. Serviço existe?
 2. Profissional existe?
 3. Profissional pertence ao serviço?
-4. Profissional está OCUPADO?
+4. Profissional está BUSY?
 5. Existe atendimento em aberto para encerrar?
 
 ### Decisões de modelagem
 
 - Encerrar atendimento não consulta fila.
-- Se status for OCUPADO mas não existir atendimento em aberto, isso é tratado como inconsistência (erro + log).
+- Se status for BUSY mas não existir atendimento em aberto, isso é tratado como inconsistência (erro + log).
 
 ```mermaid
 
@@ -193,10 +193,10 @@ sequenceDiagram
             else vinculo ok
 
                 SVC->>PRepo: statusDoProfissional(idProfissional)
-                alt status != OCUPADO (DISPONIVEL ou INDISPONIVEL)
+                alt status != BUSY (AVAILABLE ou UNAVAILABLE)
                     SVC-->>API: erro 409 (nao ha atendimento em andamento)
                     API-->>Prof: 409
-                else status == OCUPADO
+                else status == BUSY
 
                     SVC->>ARepo: buscarAtendimentoEmAberto(idServico, idProfissional)
                     alt nao encontrou atendimento em aberto
@@ -209,7 +209,7 @@ sequenceDiagram
                         SVC->>ARepo: encerrarAtendimento(atendimento.id, fimEm=agora)
                         ARepo-->>SVC: ok
 
-                        SVC->>PRepo: atualizarStatus(idProfissional, DISPONIVEL)
+                        SVC->>PRepo: atualizarStatus(idProfissional, AVAILABLE)
 
                         SVC-->>API: 200 OK
                         API-->>Prof: 200 OK
@@ -324,7 +324,7 @@ O cadastro de um profissional no sistema, com validação do nome e persistênci
 #### Decisões de modelagem
 
 - Profissional é criado com:
-    - status = INDISPONIVEL
+    - status = UNAVAILABLE
     - idService = null
 - Email é o identificador único do profissional.
 - A senha recebida é transformada internamente em passwordHash. 
@@ -482,7 +482,7 @@ sequenceDiagram
 
 #### O que este diagrama mostra
 
-O fluxo para um profissional iniciar o expediente, mudando seu status para DISPONIVEL, após validar: serviço existe, profissional existe, vínculo com o serviço e status atual (não pode estar OCUPADO).
+O fluxo para um profissional iniciar o expediente, mudando seu status para AVAILABLE, após validar: serviço existe, profissional existe, vínculo com o serviço e status atual (não pode estar BUSY).
 
 #### Participantes e papel
 
@@ -495,13 +495,13 @@ O fluxo para um profissional iniciar o expediente, mudando seu status para DISPO
 #### Entrada e saída
 
 - Entrada mínima: idServico, idProfissional
-- Saída de sucesso: 200 OK (profissional com status=DISPONIVEL)
+- Saída de sucesso: 200 OK (profissional com status=AVAILABLE)
 - Erros que interrompem:
   - serviço inexistente (404)
   - serviço inexistente (404)
   - profissional inexistente (404)
   - profissional não vinculado ao serviço (403)
-  - profissional OCUPADO (409)
+    - profissional BUSY (409)
   - falha interna ao atualizar (500)
 
 #### Pontos de decisão (alts)
@@ -509,14 +509,14 @@ O fluxo para um profissional iniciar o expediente, mudando seu status para DISPO
 1. Serviço existe?
 2. Profissional existe?
 3. Profissional está vinculado ao serviço?
-4. Profissional está OCUPADO?
+4. Profissional está BUSY?
 5. Atualização do status ocorreu com sucesso?
 
 ## Decisões de modelagem
 
-- Iniciar expediente não cria atendimento, apenas muda status para DISPONIVEL.
+- Iniciar expediente não cria atendimento, apenas muda status para AVAILABLE.
 - A validação de vínculo é feita comparando prof.idService com idServico.
-- O status OCUPADO bloqueia a operação (não faz sentido iniciar expediente “em atendimento”).
+- O status BUSY bloqueia a operação (não faz sentido iniciar expediente “em atendimento”).
 
 ```mermaid
 
@@ -550,21 +550,21 @@ sequenceDiagram
                 SVC-->>API: erro 403 (profissional nao vinculado ao servico)
                 API-->>Prof: 403
             else vinculo ok
-                alt status == OCUPADO
+                alt status == BUSY
                     SVC-->>API: erro 409 (encerre atendimento antes de iniciar expediente)
                     API-->>Prof: 409
-                else status == DISPONIVEL
+                else status == AVAILABLE
                     SVC-->>API: erro 409 (profissional ja esta em expediente)
                     API-->>Prof: 409
-                else status == INDISPONIVEL
-                    SVC->>PRepo: atualizarStatus(idProfissional, DISPONIVEL)
+                else status == UNAVAILABLE
+                    SVC->>PRepo: atualizarStatus(idProfissional, AVAILABLE)
                     alt falha ao atualizar status
                         PRepo-->>SVC: erro
                         SVC-->>API: erro 500 (falha interna)
                         API-->>Prof: 500
                     else atualizado
                         PRepo-->>SVC: ProfissionalAtualizado
-                        SVC-->>API: 200 OK (status=DISPONIVEL)
+                        SVC-->>API: 200 OK (status=AVAILABLE)
                         API-->>Prof: 200 OK + JSON
                     end
                 end
@@ -577,11 +577,11 @@ sequenceDiagram
 
 #### O que este diagrama mostra
 
-O fluxo para um profissional encerrar o expediente, mudando seu status para INDISPONIVEL, com validações de:
+O fluxo para um profissional encerrar o expediente, mudando seu status para UNAVAILABLE, com validações de:
 
 - serviço existe
 - profissional existe e está vinculado ao serviço
-- profissional não pode estar OCUPADO
+- profissional não pode estar BUSY
 - Fila está vazia?
 - Regra: não pode encerrar expediente se a fila do serviço não estiver vazia
 
@@ -597,13 +597,13 @@ O fluxo para um profissional encerrar o expediente, mudando seu status para INDI
 #### Entrada e saída
 
 - Entrada mínima: idServico, idProfissional
-- Saída de sucesso: 200 OK (status=INDISPONIVEL)
+- Saída de sucesso: 200 OK (status=UNAVAILABLE)
 - Erros que interrompem:
   - 404 serviço inexistente
   - 404 profissional inexistente
   - 403 profissional não vinculado
-  - 409 profissional OCUPADO
-  - 409 “último DISPONIVEL com fila não vazia”
+    - 409 profissional BUSY
+    - 409 “último AVAILABLE com fila não vazia”
   - 500 falha interna ao atualizar
 
 #### Pontos de decisão (alts)
@@ -611,8 +611,8 @@ O fluxo para um profissional encerrar o expediente, mudando seu status para INDI
 1 Serviço existe?
 2 Profissional existe?
 3 Profissional pertence ao serviço?
-4 Profissional está OCUPADO?
-5 Profissional é o último DISPONIVEL?
+4 Profissional está BUSY?
+5 Profissional é o último AVAILABLE?
 6 Fila tem clientes?
 7 Atualização de status ok?
 
@@ -655,10 +655,10 @@ sequenceDiagram
                 SVC-->>API: erro 403 (profissional nao pertence ao servico)
                 API-->>Prof: 403
             else vinculo ok
-                alt status == OCUPADO
+                alt status == BUSY
                     SVC-->>API: erro 409 (encerre atendimento antes de encerrar expediente)
                     API-->>Prof: 409
-                else status != OCUPADO
+                else status != BUSY
                     SVC->>Serv: filaEstaVazia()?
                     alt fila NAO vazia
                         Serv-->>SVC: false
@@ -667,7 +667,7 @@ sequenceDiagram
                     else fila vazia
                         Serv-->>SVC: true
 
-                        SVC->>PRepo: atualizarStatus(idProfissional, INDISPONIVEL)
+                        SVC->>PRepo: atualizarStatus(idProfissional, UNAVAILABLE)
                         alt falha ao atualizar status
                             PRepo-->>SVC: erro
                             SVC-->>API: erro 500
@@ -681,7 +681,7 @@ sequenceDiagram
                                 API-->>Prof: 500
                             else desvinculado
                                 PRepo-->>SVC: ProfissionalAtualizado
-                                SVC-->>API: 200 OK (status=INDISPONIVEL, idService=null)
+                                SVC-->>API: 200 OK (status=UNAVAILABLE, idService=null)
                                 API-->>Prof: 200 OK + JSON
                             end
                         end
@@ -759,27 +759,27 @@ A criação de um novo serviço com validação do nome e verificação de dupli
 
 sequenceDiagram
     actor Admin as Administrador
-    participant API as API (ServicosController)
-    participant SVC as ServicoService
-    participant Repo as ServicoRepo (memoria)
+    participant API as API (ServicesController)
+    participant SVC as ServicesService
+    participant Repo as ServicesRepo
 
-    Admin->>API: POST /v1/servicos {nome}
-    API->>SVC: criarServico(nome)
+    Admin->>API: POST /v1/services {name}
+    API->>SVC: Create(name)
 
-    alt nome vazio ou so espacos
-        SVC-->>API: erro 400 (nome invalido)
+    alt name empty or blank
+        SVC-->>API: error (invalid name)
         API-->>Admin: 400
-    else nome ok
-        SVC->>Repo: existePorNome(nome)?
-        alt ja existe
+    else name valid
+        SVC->>Repo: existsByName(name)?
+        alt already exists
             Repo-->>SVC: true
-            SVC-->>API: erro 409 (servico ja existe)
+            SVC-->>API: error (service already exists)
             API-->>Admin: 409
-        else nao existe
+        else does not exist
             Repo-->>SVC: false
-            SVC->>Repo: salvar(servicoNovo + fila)
-            Repo-->>SVC: servicoCriado
-            SVC-->>API: servicoDTO
+            SVC->>Repo: save(service)
+            Repo-->>SVC: createdService
+            SVC-->>API: serviceDTO
             API-->>Admin: 201 Created + JSON
         end
     end

@@ -9,15 +9,16 @@ import (
 )
 
 // CreateService godoc
-// @Summary Create service
-// @Description Creates a new service in the catalog.
-// @Tags Services
+// @Summary Cadastrar serviço
+// @Description Cadastra um novo serviço no catálogo.
+// @Tags Serviços
 // @Accept json
 // @Produce json
 // @Param body body createServiceRequest true "Payload"
 // @Success 201 {object} serviceDTO
-// @Failure 400 {object} domain.APIError "Invalid request"
-// @Failure 409 {object} domain.APIError "Service already exists"
+// @Failure 400 {object} domain.APIError "Requisição inválida"
+// @Failure 409 {object} domain.APIError "Serviço já existe"
+// @Failure 500 {object} domain.APIError "Erro interno"
 // @Router /v1/services [post]
 func (h *Handler) CreateService(w http.ResponseWriter, r *http.Request) {
 	var req createServiceRequest
