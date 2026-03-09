@@ -718,17 +718,17 @@ A leitura da lista de serviços cadastrados em memória e o retorno para o ator.
 ```mermaid
 
 sequenceDiagram
-    actor User as Administrador/Cliente
-    participant API as API (ServicosController)
-    participant SVC as ServicoService
-    participant Repo as ServicoRepo (memoria)
+    actor User as Admin/Client
+    participant API as API (ServicesController)
+    participant SVC as ServiceService
+    participant Repo as ServiceRepo (memory)
 
-    User->>API: GET /v1/servicos
-    API->>SVC: listarServicos()
-    SVC->>Repo: buscarTodos()
-    Repo-->>SVC: listaServicos
-    SVC-->>API: listaServicosDTO
-    API-->>User: 200 OK + JSON (pode ser lista vazia)
+    User->>API: GET /v1/services
+    API->>SVC: ListServices()
+    SVC->>Repo: List()
+    Repo-->>SVC: serviceList
+    SVC-->>API: serviceListDTO
+    API-->>User: 200 OK + JSON (may be an empty list)
 ```
 
 ### Diagrama de sequência - Criar Serviço()

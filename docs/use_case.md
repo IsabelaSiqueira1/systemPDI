@@ -80,10 +80,8 @@ Fluxo Principal:
 
 Exceções:
 
-- Não ha serviços disponivel: retornar lista vazia
-- Erro de comunicação/requisição inválida: retorna erro.
-- Falha interna ao recuperar serviços: o sistema retorna erro e loga.
-- tempo de resposta alta: o sistema retorna timeout e loga.
+- Não há serviços disponíveis: retornar lista vazia (`200`).
+- Falha interna inesperada ao processar a resposta: retornar erro (`500`).
 
 ---
 
