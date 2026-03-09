@@ -4,18 +4,19 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/IsabelaSiqueira1/ProjetinhoPDI/ProjetinhoPDI/manipulacao-dados/collections/linkedlist"
 	"github.com/IsabelaSiqueira1/systemPDI/src/internal/domain"
 	"github.com/IsabelaSiqueira1/systemPDI/src/internal/domain/entities"
 )
 
 type ProfessionalsRepository struct {
 	mu            sync.RWMutex
-	professionals []entities.Professional
+	professionals *linkedlist.LinkedList[entities.Professional]
 }
 
 func NewProfessionalsRepository() *ProfessionalsRepository {
 	return &ProfessionalsRepository{
-		professionals: []entities.Professional{},
+		professionals: linkedlist.New[entities.Professional](),
 	}
 }
 
@@ -24,26 +25,17 @@ func (r *ProfessionalsRepository) ExistsByEmail(email string) bool {
 	defer r.mu.RUnlock()
 
 	normalizedEmail := strings.TrimSpace(email)
-	for _, p := range r.professionals {
-		if strings.EqualFold(p.Email, normalizedEmail) {
-			return true
-		}
-	}
-
-	return false
+	_, found := r.professionals.Find(func(p entities.Professional) bool {
+		return strings.EqualFold(p.Email, normalizedEmail)
+	})
+	return found
 }
 
 func (r *ProfessionalsRepository) Save(professional entities.Professional) (entities.Professional, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	for _, p := range r.professionals {
-		if strings.EqualFold(p.Email, strings.TrimSpace(professional.Email)) {
-			return entities.Professional{}, domain.ErrProfessionalEmailAlreadyUsed
-		}
-	}
-
-	r.professionals = append(r.professionals, professional)
+	r.professionals.Insert(professional)
 	return professional, nil
 }
 
@@ -55,11 +47,13 @@ func (r *ProfessionalsRepository) FindByID(id string) (entities.Professional, er
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	for _, p := range r.professionals {
-		if p.ID == id {
-			return p, nil
-		}
+	p, found := r.professionals.Find(func(p entities.Professional) bool {
+		return p.ID == id
+	})
+	if found {
+		return p, nil
 	}
+
 	return entities.Professional{}, domain.ErrProfessionalNotFound
 }
 
@@ -67,11 +61,18 @@ func (r *ProfessionalsRepository) UpdateServiceID(id string, serviceID *string) 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	for i, p := range r.professionals {
-		if p.ID == id {
-			r.professionals[i].ServiceID = serviceID
-			return r.professionals[i], nil
-		}
+	updated, found := r.professionals.Update(
+		func(p entities.Professional) bool {
+			return p.ID == id
+		},
+		func(p *entities.Professional) {
+			p.ServiceID = serviceID
+		},
+	)
+
+	if found {
+		return updated, nil
 	}
+
 	return entities.Professional{}, domain.ErrProfessionalNotFound
 }

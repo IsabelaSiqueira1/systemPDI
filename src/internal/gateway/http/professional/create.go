@@ -17,6 +17,7 @@ import (
 // @Success 201 {object} professionalDTO
 // @Failure 400 {object} domain.APIError "Requisição inválida"
 // @Failure 409 {object} domain.APIError "Email já cadastrado"
+// @Failure 500 {object} domain.APIError "Erro interno"
 // @Router /v1/professionals [post]
 func (h *Handler) CreateProfessional(w http.ResponseWriter, r *http.Request) {
 	var req createProfessionalRequest

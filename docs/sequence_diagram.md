@@ -312,13 +312,14 @@ O cadastro de um profissional no sistema, com validação do nome e persistênci
 
 - Entrada mínima: nome, email, password
 - Saída de sucesso: profissional criado (201)
-- Erros que interrompem: nome inválido, email inválido, email já cadastrado, falha interna ao salvar
+- Erros que interrompem: nome inválido, email inválido, senha obrigatória não informada, email já cadastrado, falha interna ao salvar
 
 #### Pontos de decisão (alts)
 
 1. Nome é válido?
 2. Email é válido?
-3. Email já cadastrado?
+3. Senha foi informada?
+4. Email já cadastrado?
 
 #### Decisões de modelagem
 
@@ -332,10 +333,10 @@ O cadastro de um profissional no sistema, com validação do nome e persistênci
 sequenceDiagram
     actor Admin as Administrador
     participant API as "ProfessionalsController"
-    participant SVC as "ProfessionalsRepository"
+    participant SVC as "ProfessionalsService"
     participant Repo as "ProfessionalsRepository"
 
-    Admin->>API: POST /professional
+    Admin->>API: POST /v1/professionals
     API->>SVC: Create(name, email, password)
 
     alt empty name
@@ -348,31 +349,37 @@ sequenceDiagram
             API-->>Admin: 400
         else valid email address
 
-            alt invalid email address
-                SVC-->>API: error (email invalid)
+            alt empty password
+                SVC-->>API: error (password required)
                 API-->>Admin: 400
-            else valid email address
+            else valid password
 
-                SVC->>Repo: existsByEmail(email)?
-                alt email address already registered
-                    Repo-->>SVC: true
-                    SVC-->>API: error (email already registered)
-                    API-->>Admin: 409
-                else email address not registered
-                    Repo-->>SVC: false
+                alt invalid email address
+                    SVC-->>API: error (email invalid)
+                    API-->>Admin: 400
+                else valid email address
 
-                    SVC->>SVC: generatePasswordHash(password)
-                    SVC->>SVC: createProfessional(id, name, email, password, status=UNAVAILABLE, serviceId=null)
+                    SVC->>Repo: existsByEmail(email)?
+                    alt email address already registered
+                        Repo-->>SVC: true
+                        SVC-->>API: error (email already registered)
+                        API-->>Admin: 409
+                    else email address not registered
+                        Repo-->>SVC: false
 
-                    SVC->>Repo: save(professional)
-                    alt failed to save
-                        Repo-->>SVC: error password: string
-                        SVC-->>API: error(internal failure)
-                        API-->>Admin: 500
-                    else successfully saved
-                        Repo-->>SVC: professionalCreate
-                        SVC-->>API: professionalDTO
-                        API-->>Admin: 201 Created + JSON
+                        SVC->>SVC: generatePasswordHash(password)
+                        SVC->>SVC: createProfessional(id, name, email, password, status=UNAVAILABLE, serviceId=null)
+
+                        SVC->>Repo: save(professional)
+                        alt failed to save
+                            Repo-->>SVC: error password: string
+                            SVC-->>API: error(internal failure)
+                            API-->>Admin: 500
+                        else successfully saved
+                            Repo-->>SVC: professionalCreate
+                            SVC-->>API: professionalDTO
+                            API-->>Admin: 201 Created + JSON
+                        end
                     end
                 end
             end
